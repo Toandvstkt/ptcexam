@@ -1,0 +1,18 @@
+{
+  "name": "cambridge-exam-portal",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "backend": "node backend/server.js",
+    "frontend": "npm run dev --prefix frontend",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "setup": "npm install && npm install --prefix frontend"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2",
+    "mongoose": "^9.7.4"
+  }
+}
