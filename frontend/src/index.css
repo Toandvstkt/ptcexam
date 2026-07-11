@@ -796,13 +796,39 @@ h1, h2, h3, h4, h5, h6 {
   transform: translateY(0);
 }
 
+/* Exam cards grid layout */
+.exams-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
 /* Responsive adjustments for Mobile screens (<= 768px) */
 @media (max-width: 768px) {
+  /* 0. Main Wrapper & Global Overflows */
+  body, html {
+    overflow-x: hidden;
+  }
+
+  .dashboard-grid {
+    padding: 0.5rem !important;
+    gap: 1rem !important;
+  }
+
+  .glass-card {
+    padding: 1rem !important;
+  }
+
+  .exams-list-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
   /* 1. Header responsive */
   .header {
     flex-direction: column;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 0.5rem !important;
     align-items: center;
     text-align: center;
     position: relative; /* Remove sticky to save screen space on mobile */
@@ -831,7 +857,7 @@ h1, h2, h3, h4, h5, h6 {
     top: 0 !important; /* Move to top of viewport since main header is no longer sticky */
     flex-direction: column;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 0.5rem !important;
     align-items: center;
     text-align: center;
   }
@@ -846,7 +872,7 @@ h1, h2, h3, h4, h5, h6 {
   /* 3. Exam Layout Content */
   .exam-layout {
     grid-template-columns: 1fr !important;
-    padding: 1rem;
+    padding: 0.5rem !important;
     gap: 1rem;
   }
   .exam-layout .main-content {
@@ -864,43 +890,45 @@ h1, h2, h3, h4, h5, h6 {
   /* 4. Tab Headers */
   .tab-headers {
     justify-content: center;
-    gap: 0.5rem !important;
-    padding: 0 1rem;
+    gap: 0.35rem !important;
+    padding: 0 0.25rem !important;
   }
   .tab-headers button {
-    font-size: 0.85rem !important;
-    padding: 0.4rem 0.75rem !important;
+    font-size: 0.8rem !important;
+    padding: 0.35rem 0.5rem !important;
   }
 
   /* 5. Score Circle Results Page */
   .results-header-card {
-    padding: 1.5rem 1rem;
+    padding: 1.25rem 0.75rem !important;
   }
   .results-header-card h2 {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
   }
   
   /* Make result circles side by side or smaller on small screens */
   .results-score-circle {
-    width: 95px !important;
-    height: 95px !important;
-    margin: 0.25rem !important;
+    width: 90px !important;
+    height: 90px !important;
+    margin: 0.15rem !important;
     border-width: 2px !important;
   }
   .results-score-num {
-    font-size: 1.35rem !important;
+    font-size: 1.25rem !important;
   }
   .results-score-label {
-    font-size: 0.6rem !important;
-    margin-top: 0.1rem;
+    font-size: 0.55rem !important;
+    margin-top: 0.05rem;
   }
   
   /* 6. Question result card list */
   .results-grid {
     grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
   }
   .result-item-card {
-    padding: 0.75rem;
+    padding: 0.5rem 0.75rem !important;
+    gap: 0.5rem !important;
   }
   .result-text-info p {
     white-space: normal !important; /* Wrap long lines so answer detail is readable on mobile */

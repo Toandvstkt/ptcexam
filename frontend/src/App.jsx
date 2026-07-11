@@ -1151,7 +1151,7 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            <div className="exams-list-grid">
               {exams.length === 0 ? (
                 <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'hsl(var(--text-muted))', padding: '3rem 0' }}>
                   Giáo viên chưa kích hoạt đề thi nào. Vui lòng tải lại trang sau.
