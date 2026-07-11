@@ -16,11 +16,14 @@ import {
   AlertTriangle,
   RefreshCw,
   Search,
-  Eye
+  Eye,
+  ArrowUp
 } from 'lucide-react';
 import { TEMPLATES, getQuestionArray } from './utils/templates';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = window.location.port === '5173'
+  ? 'http://localhost:5000/api'
+  : '/api';
 
 export default function App() {
   // Authentication & Navigation
@@ -30,6 +33,25 @@ export default function App() {
   });
   const [currentView, setCurrentView] = useState('login'); // login, teacher_exams, teacher_students, teacher_scores, student_exams, student_session, student_result
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Scroll to Top state
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const [successMsg, setSuccessMsg] = useState('');
 
   // Teacher States
@@ -1335,18 +1357,18 @@ export default function App() {
             <h2>Kết Quả Bài Làm</h2>
             <p style={{ color: 'hsl(var(--text-secondary))' }}>Đề thi: {reportSubmission.examTitle}</p>
             
-            <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', margin: '1.5rem 0', flexWrap: 'wrap' }}>
-              <div className="results-score-circle" style={{ width: '140px', height: '140px' }}>
-                <span className="results-score-num" style={{ fontSize: '2rem' }}>{reportSubmission.score}</span>
-                <span className="results-score-label" style={{ fontSize: '0.8rem' }}>/ 82 Tổng cộng</span>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', margin: '1.5rem 0', flexWrap: 'wrap' }}>
+              <div className="results-score-circle">
+                <span className="results-score-num">{reportSubmission.score}</span>
+                <span className="results-score-label">/ 82 Tổng cộng</span>
               </div>
-              <div className="results-score-circle" style={{ width: '140px', height: '140px', background: 'hsla(var(--secondary) / 0.08)' }}>
-                <span className="results-score-num" style={{ fontSize: '2rem', color: 'hsl(var(--secondary))' }}>{reportSubmission.readingScore || 0}</span>
-                <span className="results-score-label" style={{ fontSize: '0.8rem', color: 'hsl(var(--secondary))' }}>/ 52 Reading</span>
+              <div className="results-score-circle reading">
+                <span className="results-score-num">{reportSubmission.readingScore || 0}</span>
+                <span className="results-score-label">/ 52 Reading</span>
               </div>
-              <div className="results-score-circle" style={{ width: '140px', height: '140px', background: 'hsla(var(--primary) / 0.08)' }}>
-                <span className="results-score-num" style={{ fontSize: '2rem', color: 'hsl(var(--primary))' }}>{reportSubmission.listeningScore || 0}</span>
-                <span className="results-score-label" style={{ fontSize: '0.8rem', color: 'hsl(var(--primary))' }}>/ 30 Listening</span>
+              <div className="results-score-circle listening">
+                <span className="results-score-num">{reportSubmission.listeningScore || 0}</span>
+                <span className="results-score-label">/ 30 Listening</span>
               </div>
             </div>
 
@@ -1417,6 +1439,16 @@ export default function App() {
             })}
           </div>
         </div>
+      )}
+
+      {showScrollTop && (
+        <button 
+          className="scroll-to-top-btn" 
+          onClick={scrollToTop}
+          aria-label="Cuộn lên đầu trang"
+        >
+          <ArrowUp size={20} />
+        </button>
       )}
     </div>
   );

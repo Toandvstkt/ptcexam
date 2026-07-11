@@ -619,21 +619,49 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin: 1.5rem auto;
+  margin: 0;
+  text-align: center;
+}
+
+.results-score-circle.reading {
+  background: hsla(var(--secondary) / 0.08);
+  border-color: hsl(var(--secondary));
+}
+
+.results-score-circle.listening {
+  background: hsla(var(--primary) / 0.08);
+  border-color: hsl(var(--primary));
 }
 
 .results-score-num {
   font-family: var(--font-heading);
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   font-weight: 800;
   line-height: 1;
   color: hsl(var(--primary));
 }
 
+.results-score-circle.reading .results-score-num {
+  color: hsl(var(--secondary));
+}
+
+.results-score-circle.listening .results-score-num {
+  color: hsl(var(--primary));
+}
+
 .results-score-label {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: hsl(var(--text-secondary));
   margin-top: 0.25rem;
+  padding: 0 0.5rem;
+}
+
+.results-score-circle.reading .results-score-label {
+  color: hsl(var(--secondary));
+}
+
+.results-score-circle.listening .results-score-label {
+  color: hsl(var(--primary));
 }
 
 .results-grid {
@@ -737,4 +765,155 @@ h1, h2, h3, h4, h5, h6 {
 .modal-content {
   max-width: 480px;
   width: 100%;
+}
+
+/* Scroll to Top button styling */
+.scroll-to-top-btn {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.scroll-to-top-btn:hover {
+  background: hsl(var(--primary-hover));
+  transform: translateY(-3px);
+}
+
+.scroll-to-top-btn:active {
+  transform: translateY(0);
+}
+
+/* Responsive adjustments for Mobile screens (<= 768px) */
+@media (max-width: 768px) {
+  /* 1. Header responsive */
+  .header {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    align-items: center;
+    text-align: center;
+    position: relative; /* Remove sticky to save screen space on mobile */
+  }
+  .logo-section h1 {
+    font-size: 1.15rem;
+    text-align: center;
+  }
+  .user-info {
+    width: 100%;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .user-role-badge {
+    padding: 0.15rem 0.5rem;
+    font-size: 0.7rem;
+  }
+  .btn-logout {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  /* 2. Exam Session Header (Sticky bar during exam) */
+  .exam-info-header {
+    top: 0 !important; /* Move to top of viewport since main header is no longer sticky */
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    align-items: center;
+    text-align: center;
+  }
+  .exam-info-header h2 {
+    font-size: 1.15rem;
+  }
+  .timer-box {
+    font-size: 1.05rem;
+    padding: 0.3rem 0.9rem;
+  }
+
+  /* 3. Exam Layout Content */
+  .exam-layout {
+    grid-template-columns: 1fr !important;
+    padding: 1rem;
+    gap: 1rem;
+  }
+  .exam-layout .main-content {
+    order: 1; /* Question sheet first */
+  }
+  .exam-layout aside {
+    order: 2; /* Navigation grid second */
+  }
+  .exam-nav-widget {
+    position: relative;
+    top: 0;
+    margin-top: 1rem;
+  }
+
+  /* 4. Tab Headers */
+  .tab-headers {
+    justify-content: center;
+    gap: 0.5rem !important;
+    padding: 0 1rem;
+  }
+  .tab-headers button {
+    font-size: 0.85rem !important;
+    padding: 0.4rem 0.75rem !important;
+  }
+
+  /* 5. Score Circle Results Page */
+  .results-header-card {
+    padding: 1.5rem 1rem;
+  }
+  .results-header-card h2 {
+    font-size: 1.35rem;
+  }
+  
+  /* Make result circles side by side or smaller on small screens */
+  .results-score-circle {
+    width: 95px !important;
+    height: 95px !important;
+    margin: 0.25rem !important;
+    border-width: 2px !important;
+  }
+  .results-score-num {
+    font-size: 1.35rem !important;
+  }
+  .results-score-label {
+    font-size: 0.6rem !important;
+    margin-top: 0.1rem;
+  }
+  
+  /* 6. Question result card list */
+  .results-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .result-item-card {
+    padding: 0.75rem;
+  }
+  .result-text-info p {
+    white-space: normal !important; /* Wrap long lines so answer detail is readable on mobile */
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-all;
+  }
+
+  /* 7. Scroll to Top mobile position */
+  .scroll-to-top-btn {
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
+  }
 }
