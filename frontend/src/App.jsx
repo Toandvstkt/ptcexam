@@ -854,7 +854,7 @@ export default function App() {
                                               <td><strong>{sub.examTitle}</strong></td>
                                               <td style={{ fontSize: '0.75rem' }}>{new Date(sub.submittedAt).toLocaleDateString('vi-VN')}</td>
                                               <td style={{ fontWeight: '600', color: pct >= 50 ? 'hsl(var(--success))' : 'hsl(var(--danger))' }}>
-                                                {sub.score}/{sub.totalQuestions} ({pct}%)
+                                                {pct}/100 ({sub.score}/{sub.totalQuestions} đúng)
                                               </td>
                                               <td>
                                                 <button 
@@ -1060,7 +1060,7 @@ export default function App() {
                           if (filtered.length === 0) {
                             return (
                               <tr>
-                                <td colSpan="7" style={{ textAlign: 'center', color: 'hsl(var(--text-muted))' }}>Không tìm thấy bài nộp nào phù hợp.</td>
+                              <td colSpan="6" style={{ textAlign: 'center', color: 'hsl(var(--text-muted))' }}>No submissions found.</td>
                               </tr>
                             );
                           }
@@ -1081,10 +1081,10 @@ export default function App() {
                                 <td>{new Date(sub.submittedAt).toLocaleString('vi-VN')}</td>
                                 <td>
                                   <div style={{ fontWeight: '600', color: pct >= 50 ? 'hsl(var(--success))' : 'hsl(var(--danger))' }}>
-                                    {sub.score} / {sub.totalQuestions}
+                                    {pct}/100
                                   </div>
                                   <div style={{ fontSize: '0.75rem', color: 'hsl(var(--text-secondary))', marginTop: '0.15rem' }}>
-                                    R: {sub.readingScore || 0}/52 | L: {sub.listeningScore || 0}/30
+                                    R: {sub.readingScore || 0} | L: {sub.listeningScore || 0} ({sub.score}/{sub.totalQuestions} đúng)
                                   </div>
                                 </td>
                                 <td>{pct}%</td>
@@ -1115,7 +1115,7 @@ export default function App() {
                       });
 
                       if (filteredStudents.length === 0) {
-                        return <div style={{ textAlign: 'center', color: 'hsl(var(--text-muted))', padding: '2rem' }}>Không tìm thấy học sinh nào phù hợp.</div>;
+                        return <div style={{ textAlign: 'center', color: 'hsl(var(--text-muted))', padding: '2rem' }}>No students found.</div>;
                       }
 
                       return filteredStudents.map(st => {
@@ -1167,10 +1167,10 @@ export default function App() {
                                             <td>{new Date(sub.submittedAt).toLocaleString('vi-VN')}</td>
                                             <td>
                                               <span style={{ fontWeight: '600', color: pct >= 50 ? 'hsl(var(--success))' : 'hsl(var(--danger))' }}>
-                                                {sub.score} / {sub.totalQuestions}
+                                                {pct}/100
                                               </span>
                                               <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-secondary))', marginLeft: '0.5rem' }}>
-                                                (R: {sub.readingScore}/52 | L: {sub.listeningScore}/30)
+                                                ({sub.score}/{sub.totalQuestions} đúng)
                                               </span>
                                             </td>
                                             <td>{pct}%</td>
@@ -1442,17 +1442,17 @@ export default function App() {
       {currentView === 'student_result' && reportSubmission && (
         <div className="dashboard-grid animate-fade-in" style={{ gridTemplateColumns: '1fr', padding: '2rem' }}>
           <div className="glass-card results-header-card">
-            <h2>Kết Quả Bài Làm</h2>
-            <p style={{ color: 'hsl(var(--text-secondary))' }}>Đề thi: {reportSubmission.examTitle}</p>
+            <h2>Exam Results</h2>
+            <p style={{ color: 'hsl(var(--text-secondary))' }}>Exam: {reportSubmission.examTitle}</p>
             
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', margin: '1.5rem 0', flexWrap: 'wrap' }}>
               <div className="results-score-circle">
-                <span className="results-score-num">{reportSubmission.score}</span>
-                <span className="results-score-label">/ 82 Tổng cộng</span>
+                <span className="results-score-num">{Math.round((reportSubmission.score / reportSubmission.totalQuestions) * 100)}</span>
+                <span className="results-score-label">/ 100 Total</span>
               </div>
               <div className="results-score-circle reading">
                 <span className="results-score-num">{reportSubmission.readingScore || 0}</span>
-                <span className="results-score-label">/ 52 Reading</span>
+                <span className="results-score-label">/ {reportSubmission.totalQuestions - 30} Reading</span>
               </div>
               <div className="results-score-circle listening">
                 <span className="results-score-num">{reportSubmission.listeningScore || 0}</span>
@@ -1461,7 +1461,7 @@ export default function App() {
             </div>
 
             <p style={{ fontSize: '1.1rem', fontWeight: '600', color: 'hsl(var(--text-primary))' }}>
-              Accuracy: {Math.round((reportSubmission.score / reportSubmission.totalQuestions) * 100)}%
+              {reportSubmission.score} / {reportSubmission.totalQuestions} correct answers
             </p>
             {reportSubmission.tabSwitches > 0 && (
               <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'hsl(var(--danger))', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -1482,7 +1482,7 @@ export default function App() {
               setBackView(null);
             }}>
               <ChevronLeft size={16} />
-              Quay Lại
+              Back
             </button>
           </div>
 

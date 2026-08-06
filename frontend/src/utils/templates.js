@@ -31,12 +31,11 @@ export const TEMPLATES = {
       {
         partNum: 4,
         title: "Part 4 (Q25\u201330) \u2013 Key Word Transformation",
-        description: "Each question is worth 2 marks. Fill in BOTH parts. Use CAPITALS.",
+        description: "Complete the second sentence using 2–5 words including the key word. Use CAPITALS.",
         questionRange: [25, 30],
         type: "text",
         uppercase: true,
-        slots: 2,
-        placeholder: ["Part 1...", "Part 2..."]
+        placeholder: "Type 2–5 words..."
       },
       {
         partNum: 5,
