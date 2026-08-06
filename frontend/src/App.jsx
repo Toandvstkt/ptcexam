@@ -446,11 +446,15 @@ export default function App() {
     TEMPLATES.reading.parts.forEach(part => {
       if (readingActive.includes(part.partNum)) {
         const qArray = getQuestionArray(part.questionRange);
+        const slots = part.slots || 1;
         qArray.forEach(qNum => {
-          const qKey = `r_${qNum}`;
-          const val = editingExam.keyAnswers?.[qKey];
-          if (!val || String(val).trim() === '') {
-            missingQuestions.push(`Reading Part ${part.partNum} (Question ${qNum})`);
+          for (let s = 1; s <= slots; s++) {
+            const qKey = s === 1 ? `r_${qNum}` : `r_${qNum}_s${s}`;
+            const val = editingExam.keyAnswers?.[qKey];
+            if (!val || String(val).trim() === '') {
+              const label = slots > 1 ? `Question ${qNum}.${s}` : `Question ${qNum}`;
+              missingQuestions.push(`Reading Part ${part.partNum} (${label})`);
+            }
           }
         });
       }
@@ -461,11 +465,15 @@ export default function App() {
     TEMPLATES.listening.parts.forEach(part => {
       if (listeningActive.includes(part.partNum)) {
         const qArray = getQuestionArray(part.questionRange);
+        const slots = part.slots || 1;
         qArray.forEach(qNum => {
-          const qKey = `l_${qNum}`;
-          const val = editingExam.keyAnswers?.[qKey];
-          if (!val || String(val).trim() === '') {
-            missingQuestions.push(`Listening Part ${part.partNum} (Question ${qNum})`);
+          for (let s = 1; s <= slots; s++) {
+            const qKey = s === 1 ? `l_${qNum}` : `l_${qNum}_s${s}`;
+            const val = editingExam.keyAnswers?.[qKey];
+            if (!val || String(val).trim() === '') {
+              const label = slots > 1 ? `Question ${qNum}.${s}` : `Question ${qNum}`;
+              missingQuestions.push(`Listening Part ${part.partNum} (${label})`);
+            }
           }
         });
       }
@@ -761,7 +769,7 @@ export default function App() {
                       setActiveTab('reading');
                     }}>
                       <Plus size={16} />
-                      + Create Exam (82 Qs)
+                      Create New Exam
                     </button>
                   </div>
                 </div>
@@ -971,36 +979,45 @@ export default function App() {
                       <p>{part.description}</p>
                       <div className="questions-grid">
                         {qArray.map(qNum => {
-                          const qKey = `${activeTab === 'reading' ? 'r' : 'l'}_${qNum}`;
-                          const currentVal = editingExam.keyAnswers[qKey] || '';
-                          const isMissing = !currentVal || !currentVal.trim();
-                          return (
-                            <div key={qNum} className="question-row" style={isMissing ? { border: '1px dashed hsla(var(--danger) / 0.5)', background: 'hsla(var(--danger) / 0.03)' } : {}}>
-                              <span className="question-num">{qNum}</span>
-                              {part.type === 'mcq' ? (
-                                <div className="answer-mcq-options">
-                                  {part.options.map(opt => (
-                                    <button key={opt} type="button" className={`mcq-option-btn ${currentVal === opt ? 'selected' : ''}`}
-                                      onClick={() => setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [qKey]: opt } })}>
-                                      {opt}
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                <input className="answer-text-input" type="text" placeholder={part.placeholder}
-                                  style={{
-                                    ...(part.uppercase ? { textTransform: 'uppercase' } : {}),
-                                    border: isMissing ? '1.5px solid hsla(var(--danger) / 0.7)' : '1px solid hsl(var(--border-color))'
-                                  }}
-                                  value={currentVal}
-                                  required
-                                  onChange={e => {
-                                    const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
-                                    setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [qKey]: val } });
-                                  }} />
-                              )}
-                            </div>
-                          );
+                          const prefix = activeTab === 'reading' ? 'r' : 'l';
+                          const qKey = `${prefix}_${qNum}`;
+                          const slots = part.slots || 1;
+                          const slotKeys = Array.from({ length: slots }, (_, i) => i === 0 ? qKey : `${qKey}_s${i + 1}`);
+
+                          return slotKeys.map((sKey, sIdx) => {
+                            const currentVal = editingExam.keyAnswers[sKey] || '';
+                            const isMissing = !currentVal || !currentVal.trim();
+                            const placeholder = Array.isArray(part.placeholder) ? (part.placeholder[sIdx] || 'Type word...') : part.placeholder;
+                            const displayNum = slots > 1 ? `${qNum}.${sIdx + 1}` : `${qNum}`;
+
+                            return (
+                              <div key={sKey} className="question-row" style={isMissing ? { border: '1px dashed hsla(var(--danger) / 0.5)', background: 'hsla(var(--danger) / 0.03)' } : {}}>
+                                <span className="question-num">{displayNum}</span>
+                                {part.type === 'mcq' ? (
+                                  <div className="answer-mcq-options">
+                                    {part.options.map(opt => (
+                                      <button key={opt} type="button" className={`mcq-option-btn ${currentVal === opt ? 'selected' : ''}`}
+                                        onClick={() => setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [sKey]: opt } })}>
+                                        {opt}
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <input className="answer-text-input" type="text" placeholder={placeholder}
+                                    style={{
+                                      ...(part.uppercase ? { textTransform: 'uppercase' } : {}),
+                                      border: isMissing ? '1.5px solid hsla(var(--danger) / 0.7)' : '1px solid hsl(var(--border-color))'
+                                    }}
+                                    value={currentVal}
+                                    required
+                                    onChange={e => {
+                                      const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
+                                      setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [sKey]: val } });
+                                    }} />
+                                )}
+                              </div>
+                            );
+                          });
                         })}
                       </div>
                     </div>
@@ -1865,33 +1882,42 @@ export default function App() {
                       <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.85rem', marginBottom: '1.25rem' }}>{part.description}</p>
                       <div className="questions-grid">
                         {qArray.map(qNum => {
-                          const qKey = `${activeTab === 'reading' ? 'r' : 'l'}_${qNum}`;
-                          const currentAnswer = studentAnswers[qKey] || '';
-                          return (
-                            <div key={qNum} className="question-row" id={`q-field-${qKey}`}>
-                              <span className="question-num" style={{ background: currentAnswer ? 'hsl(var(--primary))' : 'hsl(var(--bg-secondary))', color: currentAnswer ? '#fff' : 'hsl(var(--text-secondary))' }}>
-                                {qNum}
-                              </span>
-                              {part.type === 'mcq' ? (
-                                <div className="answer-mcq-options">
-                                  {part.options.map(opt => (
-                                    <button key={opt} type="button" className={`mcq-option-btn ${currentAnswer === opt ? 'selected' : ''}`}
-                                      onClick={() => setStudentAnswers({ ...studentAnswers, [qKey]: opt })}>
-                                      {opt}
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                <input className="answer-text-input" type="text" placeholder={part.placeholder}
-                                  style={part.uppercase ? { textTransform: 'uppercase' } : {}}
-                                  value={currentAnswer}
-                                  onChange={e => {
-                                    const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
-                                    setStudentAnswers({ ...studentAnswers, [qKey]: val });
-                                  }} />
-                              )}
-                            </div>
-                          );
+                          const prefix = activeTab === 'reading' ? 'r' : 'l';
+                          const qKey = `${prefix}_${qNum}`;
+                          const slots = part.slots || 1;
+                          const slotKeys = Array.from({ length: slots }, (_, i) => i === 0 ? qKey : `${qKey}_s${i + 1}`);
+
+                          return slotKeys.map((sKey, sIdx) => {
+                            const currentAnswer = studentAnswers[sKey] || '';
+                            const placeholder = Array.isArray(part.placeholder) ? (part.placeholder[sIdx] || 'Type word...') : part.placeholder;
+                            const displayNum = slots > 1 ? `${qNum}.${sIdx + 1}` : `${qNum}`;
+
+                            return (
+                              <div key={sKey} className="question-row" id={`q-field-${sKey}`}>
+                                <span className="question-num" style={{ background: currentAnswer ? 'hsl(var(--primary))' : 'hsl(var(--bg-secondary))', color: currentAnswer ? '#fff' : 'hsl(var(--text-secondary))' }}>
+                                  {displayNum}
+                                </span>
+                                {part.type === 'mcq' ? (
+                                  <div className="answer-mcq-options">
+                                    {part.options.map(opt => (
+                                      <button key={opt} type="button" className={`mcq-option-btn ${currentAnswer === opt ? 'selected' : ''}`}
+                                        onClick={() => setStudentAnswers({ ...studentAnswers, [sKey]: opt })}>
+                                        {opt}
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <input className="answer-text-input" type="text" placeholder={placeholder}
+                                    style={part.uppercase ? { textTransform: 'uppercase' } : {}}
+                                    value={currentAnswer}
+                                    onChange={e => {
+                                      const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
+                                      setStudentAnswers({ ...studentAnswers, [sKey]: val });
+                                    }} />
+                                )}
+                              </div>
+                            );
+                          });
                         })}
                       </div>
                     </div>
@@ -2003,30 +2029,37 @@ export default function App() {
 
                   <div className="results-grid">
                     {qArray.map(qNum => {
-                      const qKey = `${activeTab === 'reading' ? 'r' : 'l'}_${qNum}`;
-                      const detail = reportSubmission.details[qKey] || { studentAnswer: '', correctAnswer: '', isCorrect: false };
-                      // Split multiple alternative keys
-                      const displayKey = detail.correctAnswer.split('|').join(' or ');
-                      return (
-                        <div key={qNum} className={`result-item-card ${detail.isCorrect ? 'correct' : 'incorrect'}`}>
-                          <div className="result-indicator">
-                            {detail.isCorrect ? <CheckCircle size={18} /> : <XCircle size={18} />}
-                          </div>
-                          <div className="result-text-info">
-                            <strong style={{ display: 'block', fontSize: '0.9rem' }}>Question {qNum}</strong>
-                            <p style={{ fontSize: '0.8rem' }}>
-                              Your answer: <strong className={detail.isCorrect ? 'text-success' : 'text-danger'}>
-                                {detail.studentAnswer || '(Empty)'}
-                              </strong>
-                            </p>
-                            {!detail.isCorrect && (
-                              <p style={{ fontSize: '0.8rem', opacity: 0.9 }}>
-                                Correct answer: <strong className="text-success">{displayKey}</strong>
+                      const prefix = activeTab === 'reading' ? 'r' : 'l';
+                      const qKey = `${prefix}_${qNum}`;
+                      const slots = part.slots || 1;
+                      const slotKeys = Array.from({ length: slots }, (_, i) => i === 0 ? qKey : `${qKey}_s${i + 1}`);
+
+                      return slotKeys.map((sKey, sIdx) => {
+                        const detail = reportSubmission.details[sKey] || { studentAnswer: '', correctAnswer: '', isCorrect: false };
+                        const displayKey = detail.correctAnswer.split('|').join(' or ');
+                        const displayNum = slots > 1 ? `${qNum}.${sIdx + 1}` : `${qNum}`;
+
+                        return (
+                          <div key={sKey} className={`result-item-card ${detail.isCorrect ? 'correct' : 'incorrect'}`}>
+                            <div className="result-indicator">
+                              {detail.isCorrect ? <CheckCircle size={18} /> : <XCircle size={18} />}
+                            </div>
+                            <div className="result-text-info">
+                              <strong style={{ display: 'block', fontSize: '0.9rem' }}>Question {displayNum}</strong>
+                              <p style={{ fontSize: '0.8rem' }}>
+                                Your answer: <strong className={detail.isCorrect ? 'text-success' : 'text-danger'}>
+                                  {detail.studentAnswer || '(Empty)'}
+                                </strong>
                               </p>
-                            )}
+                              {!detail.isCorrect && (
+                                <p style={{ fontSize: '0.8rem', opacity: 0.9 }}>
+                                  Correct answer: <strong className="text-success">{displayKey}</strong>
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
+                        );
+                      });
                     })}
                   </div>
                 </div>

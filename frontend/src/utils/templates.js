@@ -126,7 +126,8 @@ export function countActiveQuestions(exam) {
     const active = getActiveParts(exam, tab);
     TEMPLATES[tab].parts.forEach(p => {
       if (active.includes(p.partNum)) {
-        total += p.questionRange[1] - p.questionRange[0] + 1;
+        const count = p.questionRange[1] - p.questionRange[0] + 1;
+        total += count * (p.slots || 1);
       }
     });
   });
