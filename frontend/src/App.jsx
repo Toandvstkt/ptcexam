@@ -299,16 +299,16 @@ export default function App() {
         setErrorMsg(data.error || 'Lỗi khi lưu đề thi.');
         return;
       }
-      setSuccessMsg('Đã lưu đề thi thành công.');
+      setSuccessMsg('Exam saved successfully.');
       setEditingExam(null);
       fetchTeacherData();
     } catch (err) {
-      setErrorMsg('Không thể lưu đề thi.');
+      setErrorMsg('Failed to save exam.');
     }
   };
 
   const handleDeleteExam = async (id) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa đề thi này? Tất cả bài làm liên quan cũng sẽ bị xóa.")) return;
+    if (!window.confirm("Are you sure you want to delete this exam? All related student submissions will also be deleted.")) return;
     try {
       await fetch(`${API_BASE}/exams/${id}`, {
         method: 'DELETE',
@@ -332,7 +332,7 @@ export default function App() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setErrorMsg(data.error || 'Lỗi khi thêm học sinh.');
+        setErrorMsg(data.error || 'Failed to add student.');
         return;
       }
       setNewStudentName('');
@@ -340,12 +340,12 @@ export default function App() {
       setNewStudentClass('');
       fetchTeacherData();
     } catch (err) {
-      setErrorMsg('Không thể thêm học sinh.');
+      setErrorMsg('Failed to add student.');
     }
   };
 
   const handleDeleteStudent = async (id) => {
-    if (!window.confirm("Xóa tài khoản học sinh này?")) return;
+    if (!window.confirm("Delete this student account?")) return;
     try {
       await fetch(`${API_BASE}/users/${id}`, {
         method: 'DELETE',
@@ -545,7 +545,7 @@ export default function App() {
                       setActiveTab('reading');
                     }}>
                       <Plus size={16} />
-                      Tạo Đề Thi Mới (82 câu)
+                      Create New Exam
                     </button>
                   </div>
                 </div>
@@ -575,8 +575,8 @@ export default function App() {
                                 {ex.assignedClass || 'All'}
                               </span>
                             </td>
-                            <td>{ex.durationMinutes} phút</td>
-                            <td>{Object.keys(ex.keyAnswers || {}).length} / 82 câu đã set</td>
+                            <td>{ex.durationMinutes} mins</td>
+                            <td>{Object.keys(ex.keyAnswers || {}).length} / {ex.totalQuestions || 82} keys set</td>
                             <td>
                               <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button className="btn btn-secondary btn-sm" onClick={() => setEditingExam(ex)}>
@@ -601,12 +601,12 @@ export default function App() {
               <form onSubmit={handleSaveExam} className="glass-card animate-fade-in">
                 <div className="exam-creator-header">
                   <div>
-                    <h2>{editingExam.id ? 'Sửa Đề Thi' : 'Tạo Đề Thi Mới'}</h2>
-                    <p style={{ color: 'hsl(var(--text-secondary))' }}>Thiết lập thông tin và nhập đáp án đúng để hệ thống chấm tự động.</p>
+                    <h2>{editingExam.id ? 'Edit Exam' : 'Create New Exam'}</h2>
+                    <p style={{ color: 'hsl(var(--text-secondary))' }}>Configure exam details and set answer keys for automatic grading.</p>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => setEditingExam(null)}>Hủy</button>
-                    <button type="submit" className="btn btn-primary">Lưu Đề Thi</button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingExam(null)}>Cancel</button>
+                    <button type="submit" className="btn btn-primary">Save Exam</button>
                   </div>
                 </div>
 
@@ -631,7 +631,7 @@ export default function App() {
                       required
                       style={{ height: '2.7rem', padding: '0.5rem', background: 'hsla(var(--background-card-raw) / 0.6)', color: 'hsl(var(--text-primary))' }}
                     >
-                      <option value="All">Tất cả các lớp (All)</option>
+                      <option value="All">All Classes</option>
                       {classes.map(c => (
                         <option key={c.id} value={c.name}>{c.name}</option>
                       ))}
@@ -640,10 +640,10 @@ export default function App() {
                 </div>
 
                 <h2 style={{ fontSize: '1.25rem', marginTop: '2rem', borderBottom: '1px solid hsla(var(--border-color) / 0.4)', paddingBottom: '0.5rem' }}>
-                  Thiết Lập Đáp Án Chi Tiết (Answer Key)
+                  Answer Key Setup
                 </h2>
                 <p style={{ fontSize: '0.85rem', color: 'hsl(var(--text-muted))', marginTop: '0.25rem', marginBottom: '1.5rem' }}>
-                  * Đối với các câu điền từ tự do, bạn có thể nhập nhiều đáp án đúng cách nhau bằng dấu gạch đứng " | " (ví dụ: `known | well-known`). Hệ thống tự động bỏ qua viết hoa/viết thường và khoảng trắng dư thừa.
+                  * For fill-in-the-blank questions, separate multiple acceptable answers with vertical bars " | " (e.g. known | well-known). Case and surrounding spaces are ignored automatically.
                 </p>
 
                 {renderTabHeaders(editingExam)}
@@ -742,12 +742,12 @@ export default function App() {
                 
                 <form onSubmit={handleAddClass} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '2rem', flexWrap: 'wrap' }}>
                   <div className="form-group" style={{ flex: 1, minWidth: '200px', marginBottom: 0 }}>
-                    <label className="form-label">Tên lớp học</label>
-                    <input className="form-input" type="text" placeholder="Ví dụ: 12A1" value={newClassName} onChange={e => setNewClassName(e.target.value)} required />
+                    <label className="form-label">Class Name</label>
+                    <input className="form-input" type="text" placeholder="e.g. 12A1" value={newClassName} onChange={e => setNewClassName(e.target.value)} required />
                   </div>
                   <button className="btn btn-primary" type="submit" style={{ height: '2.7rem' }}>
                     <Plus size={16} />
-                    Tạo Lớp Học
+                    Create Class
                   </button>
                 </form>
 
@@ -757,15 +757,15 @@ export default function App() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Tên Lớp Học</th>
-                        <th>Mã Lớp</th>
-                        <th style={{ width: '80px' }}>Xóa</th>
+                        <th>Class Name</th>
+                        <th>Class ID</th>
+                        <th style={{ width: '80px' }}>Delete</th>
                       </tr>
                     </thead>
                     <tbody>
                       {classes.length === 0 ? (
                         <tr>
-                          <td colSpan="3" style={{ textAlign: 'center', color: 'hsl(var(--text-muted))' }}>Chưa có lớp học nào được tạo.</td>
+                          <td colSpan="3" style={{ textAlign: 'center', color: 'hsl(var(--text-muted))' }}>No classes created yet.</td>
                         </tr>
                       ) : (
                         classes.map(c => (
@@ -782,7 +782,7 @@ export default function App() {
                                   gap: '0.35rem'
                                 }} 
                                 onClick={() => setSelectedClassForDetails(c)}
-                                title="Click để xem học viên và lịch sử làm bài"
+                                title="Click to view students and submission history"
                               >
                                 <Users size={15} style={{ opacity: 0.8 }} />
                                 {c.name}
@@ -806,20 +806,20 @@ export default function App() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid hsl(var(--border-color))', paddingBottom: '0.75rem' }}>
                       <h3 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
                         <Users size={18} style={{ color: 'hsl(var(--primary))' }} />
-                        <span>Danh Sách Học Viên - Lớp {selectedClassForDetails.name}</span>
+                        <span>Student List — Class {selectedClassForDetails.name}</span>
                       </h3>
                       <button 
                         className="btn btn-secondary btn-sm" 
                         onClick={() => setSelectedClassForDetails(null)}
                       >
-                        Đóng chi tiết
+                        Close Details
                       </button>
                     </div>
 
                     {(() => {
                       const classStudents = students.filter(s => s.className === selectedClassForDetails.name);
                       if (classStudents.length === 0) {
-                        return <p style={{ color: 'hsl(var(--text-secondary))', fontStyle: 'italic', padding: '1rem 0' }}>Lớp học này chưa có học viên nào.</p>;
+                        return <p style={{ color: 'hsl(var(--text-secondary))', fontStyle: 'italic', padding: '1rem 0' }}>No students in this class yet.</p>;
                       }
                       
                       return (
@@ -831,7 +831,7 @@ export default function App() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                                   <strong style={{ fontSize: '1rem', color: 'hsl(var(--text-primary))' }}>{st.username}</strong>
                                   <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-secondary))', background: 'hsl(var(--bg-secondary))', padding: '0.15rem 0.5rem', borderRadius: 'var(--radius-sm)' }}>
-                                    Đã làm {studentSubs.length} bài thi
+                                    Completed {studentSubs.length} exam(s)
                                   </span>
                                 </div>
                                 
@@ -840,10 +840,10 @@ export default function App() {
                                     <table className="data-table" style={{ fontSize: '0.85rem' }}>
                                       <thead>
                                         <tr>
-                                          <th>Đề Thi</th>
-                                          <th>Ngày Nộp</th>
-                                          <th>Điểm Số</th>
-                                          <th>Hành Động</th>
+                                          <th>Exam</th>
+                                          <th>Date Submitted</th>
+                                          <th>Score</th>
+                                          <th>Actions</th>
                                         </tr>
                                       </thead>
                                       <tbody>
@@ -852,9 +852,9 @@ export default function App() {
                                           return (
                                             <tr key={sub.id}>
                                               <td><strong>{sub.examTitle}</strong></td>
-                                              <td style={{ fontSize: '0.75rem' }}>{new Date(sub.submittedAt).toLocaleDateString('vi-VN')}</td>
+                                              <td style={{ fontSize: '0.75rem' }}>{new Date(sub.submittedAt).toLocaleDateString('en-GB')}</td>
                                               <td style={{ fontWeight: '600', color: pct >= 50 ? 'hsl(var(--success))' : 'hsl(var(--danger))' }}>
-                                                {pct}/100 ({sub.score}/{sub.totalQuestions} đúng)
+                                                {pct}/100 ({sub.score}/{sub.totalQuestions} correct)
                                               </td>
                                               <td>
                                                 <button 
@@ -867,7 +867,7 @@ export default function App() {
                                                   }}
                                                 >
                                                   <Eye size={12} />
-                                                  Xem Bài
+                                                  View
                                                 </button>
                                               </td>
                                             </tr>
@@ -877,7 +877,7 @@ export default function App() {
                                     </table>
                                   </div>
                                 ) : (
-                                  <p style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))', margin: '0.25rem 0 0 0', fontStyle: 'italic' }}>Chưa có lượt nộp bài nào.</p>
+                                  <p style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))', margin: '0.25rem 0 0 0', fontStyle: 'italic' }}>No submissions yet.</p>
                                 )}
                               </div>
                             );
@@ -977,8 +977,8 @@ export default function App() {
               <div className="glass-card animate-fade-in">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
                   <div>
-                    <h2>Báo Cáo Kết Quả Thi</h2>
-                    <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.9rem' }}>Theo dõi điểm số và chi tiết các bài nộp từ học sinh.</p>
+                    <h2>Score Reports</h2>
+                    <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.9rem' }}>Track exam results and view detailed student submissions.</p>
                   </div>
                   {/* Reporting Mode Toggles */}
                   <div style={{ display: 'flex', background: 'hsl(var(--bg-secondary))', padding: '0.2rem', borderRadius: 'var(--radius-sm)', border: '1px solid hsl(var(--border-color))' }}>
@@ -987,14 +987,14 @@ export default function App() {
                       style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', border: 'none', background: reportingMode === 'submissions' ? '' : 'transparent' }} 
                       onClick={() => setReportingMode('submissions')}
                     >
-                      Tất cả bài nộp
+                      All Submissions
                     </button>
                     <button 
                       className={`btn ${reportingMode === 'students' ? 'btn-primary' : 'btn-secondary'}`} 
                       style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', border: 'none', background: reportingMode === 'students' ? '' : 'transparent' }} 
                       onClick={() => setReportingMode('students')}
                     >
-                      Danh sách học viên
+                      By Student
                     </button>
                   </div>
                 </div>
@@ -1002,14 +1002,14 @@ export default function App() {
                 {/* Filters Toolbar */}
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap', background: 'hsl(var(--bg-primary))', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid hsl(var(--border-color))' }}>
                   <div className="form-group" style={{ flex: '1', minWidth: '180px', marginBottom: 0 }}>
-                    <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Lọc theo Lớp</label>
+                    <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Filter by Class</label>
                     <select
                       className="form-input"
                       value={scoreFilterClass}
                       onChange={e => { setScoreFilterClass(e.target.value); setExpandedStudentId(null); }}
                       style={{ height: '2.5rem', padding: '0.25rem 0.5rem', background: 'hsl(var(--card-bg))' }}
                     >
-                      <option value="All">Tất cả các lớp (All)</option>
+                      <option value="All">All Classes</option>
                       {classes.map(c => (
                         <option key={c.id} value={c.name}>{c.name}</option>
                       ))}
@@ -1017,12 +1017,12 @@ export default function App() {
                   </div>
                   
                   <div className="form-group" style={{ flex: '2', minWidth: '220px', marginBottom: 0 }}>
-                    <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Tìm kiếm học sinh</label>
+                    <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Search Student</label>
                     <div style={{ position: 'relative' }}>
                       <input
                         className="form-input"
                         type="text"
-                        placeholder="Nhập tên học sinh..."
+                        placeholder="Enter student name..."
                         value={scoreSearchStudent}
                         onChange={e => setScoreSearchStudent(e.target.value)}
                         style={{ height: '2.5rem', paddingLeft: '2.25rem', background: 'hsl(var(--card-bg))' }}
@@ -1251,22 +1251,22 @@ export default function App() {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'hsl(var(--success))', fontWeight: '600' }}>
                               <CheckCircle size={16} />
-                              <span>Tổng Điểm: {previousSub.score} / 82</span>
+                              <span>Score: {Math.round((previousSub.score / previousSub.totalQuestions) * 100)} / 100</span>
                             </div>
                             <div style={{ fontSize: '0.8rem', color: 'hsl(var(--text-secondary))' }}>
-                              Reading: {previousSub.readingScore || 0}/52 | Listening: {previousSub.listeningScore || 0}/30
+                              Reading: {previousSub.readingScore || 0} | Listening: {previousSub.listeningScore || 0} ({previousSub.score}/{previousSub.totalQuestions} correct)
                             </div>
                             <button className="btn btn-secondary btn-sm" style={{ width: '100%', marginTop: '0.5rem' }} onClick={() => {
                               setReportSubmission(previousSub);
                               setCurrentView('student_result');
                               setActiveTab('reading');
                             }}>
-                              Xem lại bài
+                              View Result
                             </button>
                           </div>
                         ) : (
                           <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => handleStartExam(ex)}>
-                            Bắt Đầu Điền Đáp Án
+                            Start Exam
                             <ChevronRight size={16} />
                           </button>
                         )}
@@ -1288,7 +1288,7 @@ export default function App() {
             <div>
               <h2 style={{ fontSize: '1.4rem' }}>{activeExam.title}</h2>
               <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.9rem' }}>
-                Đang làm bài: Hãy điền đáp án giống với bài làm trên giấy của bạn.
+                Exam in progress: Enter your answers matching your paper sheet.
               </p>
             </div>
             <div className={`timer-box ${timeLeft < 120 ? 'warning' : ''}`}>
@@ -1382,9 +1382,9 @@ export default function App() {
             {/* Right hand side sticky widget */}
             <aside>
               <div className="glass-card exam-nav-widget">
-                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Bảng Tiến Độ</h3>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Progress Navigator</h3>
                 <p style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))' }}>
-                  Theo dõi các câu hỏi đã điền. Bạn có thể nhấn vào nút số để cuộn nhanh đến câu đó.
+                  Track answered questions. Click any question number to scroll directly to it.
                 </p>
 
               {TEMPLATES[activeTab].parts
@@ -1411,7 +1411,7 @@ export default function App() {
                 })}
 
                 <button className="btn btn-primary" style={{ width: '100%', marginTop: '2rem' }} onClick={() => setShowConfirmSubmit(true)}>
-                  Nộp Bài Làm
+                  Submit Exam
                 </button>
               </div>
             </aside>
@@ -1423,14 +1423,14 @@ export default function App() {
               <div className="glass-card modal-content animate-fade-in">
                 <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', color: 'hsl(var(--warning))' }}>
                   <AlertTriangle size={24} />
-                  <h3 style={{ fontSize: '1.25rem' }}>Xác Nhận Nộp Bài</h3>
+                  <h3 style={{ fontSize: '1.25rem' }}>Confirm Submission</h3>
                 </div>
                 <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-                  Bạn có chắc chắn muốn nộp bài? Hãy kiểm tra kỹ tất cả các đáp án đã điền trên Answer Sheet.
+                  Are you sure you want to submit your exam? Please review all your answers carefully.
                 </p>
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                  <button className="btn btn-secondary" onClick={() => setShowConfirmSubmit(false)}>Hủy</button>
-                  <button className="btn btn-primary" onClick={handleManualSubmit}>Nộp Bài</button>
+                  <button className="btn btn-secondary" onClick={() => setShowConfirmSubmit(false)}>Cancel</button>
+                  <button className="btn btn-primary" onClick={handleManualSubmit}>Submit Exam</button>
                 </div>
               </div>
             </div>
@@ -1488,7 +1488,7 @@ export default function App() {
 
           <div className="glass-card">
             <h3 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', borderBottom: '1px solid hsla(var(--border-color) / 0.4)', paddingBottom: '0.5rem' }}>
-              Chi Tiết Bài Làm Từng Câu
+              Detailed Answer Breakdown
             </h3>
 
             {renderTabHeaders(null)}
@@ -1504,22 +1504,22 @@ export default function App() {
                       const qKey = `${activeTab === 'reading' ? 'r' : 'l'}_${qNum}`;
                       const detail = reportSubmission.details[qKey] || { studentAnswer: '', correctAnswer: '', isCorrect: false };
                       // Split multiple alternative keys
-                      const displayKey = detail.correctAnswer.split('|').join(' hoặc ');
+                      const displayKey = detail.correctAnswer.split('|').join(' or ');
                       return (
                         <div key={qNum} className={`result-item-card ${detail.isCorrect ? 'correct' : 'incorrect'}`}>
                           <div className="result-indicator">
                             {detail.isCorrect ? <CheckCircle size={18} /> : <XCircle size={18} />}
                           </div>
                           <div className="result-text-info">
-                            <strong style={{ display: 'block', fontSize: '0.9rem' }}>Câu {qNum}</strong>
+                            <strong style={{ display: 'block', fontSize: '0.9rem' }}>Question {qNum}</strong>
                             <p style={{ fontSize: '0.8rem' }}>
-                              Đáp án của bạn: <strong className={detail.isCorrect ? 'text-success' : 'text-danger'}>
-                                {detail.studentAnswer || '(Trống)'}
+                              Your answer: <strong className={detail.isCorrect ? 'text-success' : 'text-danger'}>
+                                {detail.studentAnswer || '(Empty)'}
                               </strong>
                             </p>
                             {!detail.isCorrect && (
                               <p style={{ fontSize: '0.8rem', opacity: 0.9 }}>
-                                Đáp án đúng: <strong className="text-success">{displayKey}</strong>
+                                Correct answer: <strong className="text-success">{displayKey}</strong>
                               </p>
                             )}
                           </div>
@@ -1538,7 +1538,7 @@ export default function App() {
         <button 
           className="scroll-to-top-btn" 
           onClick={scrollToTop}
-          aria-label="Cuộn lên đầu trang"
+          aria-label="Scroll to top"
         >
           <ArrowUp size={20} />
         </button>
