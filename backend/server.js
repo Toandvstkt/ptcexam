@@ -39,6 +39,10 @@ function getActiveQuestionKeys(activeParts, prefix, tab) {
     if (!activePartNums.includes(p.partNum)) continue;
     for (let q = p.range[0]; q <= p.range[1]; q++) {
       keys.push(`${prefix}_${q}`);
+      // Reading Part 4 has 2 graded slots per question
+      if (tab === 'reading' && p.partNum === 4) {
+        keys.push(`${prefix}_${q}_s2`);
+      }
     }
   }
   return keys;

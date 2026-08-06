@@ -448,10 +448,10 @@ export default function App() {
         <header className="header">
           <div className="logo-section">
             <BookOpen size={28} style={{ color: 'hsl(var(--primary))' }} />
-            <h1>Cổng Luyện Thi Cambridge</h1>
+            <h1>Cambridge Exam Portal</h1>
           </div>
           <div className="user-info">
-            <span className="user-role-badge">{user.role === 'teacher' ? 'Giáo viên' : 'Học viên'}</span>
+            <span className="user-role-badge">{user.role === 'teacher' ? 'Teacher' : 'Student'}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <User size={16} />
               <strong style={{ fontSize: '0.95rem' }}>{user.username}</strong>
@@ -470,8 +470,8 @@ export default function App() {
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
               <BookOpen size={48} style={{ color: 'hsl(var(--primary))' }} />
             </div>
-            <h2>Đăng Nhập Hệ Thống</h2>
-            <p>Nhập tài khoản được cấp để bắt đầu</p>
+            <h2>Sign In</h2>
+            <p>Enter your account credentials to get started</p>
             {errorMsg && (
               <div style={{ color: 'hsl(var(--danger))', background: 'hsla(var(--danger) / 0.1)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.25rem', fontSize: '0.9rem', textAlign: 'center', border: '1px solid hsla(var(--danger) / 0.2)' }}>
                 {errorMsg}
@@ -482,15 +482,15 @@ export default function App() {
               handleLogin(e.target.username.value, e.target.password.value);
             }}>
               <div className="form-group">
-                <label className="form-label">Tên đăng nhập</label>
-                <input className="form-input" name="username" type="text" placeholder="Ví dụ: student1 hoặc teacher" required />
+                <label className="form-label">Username</label>
+                <input className="form-input" name="username" type="text" placeholder="e.g. student1 or teacher" required />
               </div>
               <div className="form-group">
-                <label className="form-label">Mật khẩu</label>
+                <label className="form-label">Password</label>
                 <input className="form-input" name="password" type="password" placeholder="••••••" required />
               </div>
               <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} type="submit">
-                Đăng Nhập
+                Sign In
               </button>
             </form>
           </div>
@@ -505,25 +505,25 @@ export default function App() {
             <div className="glass-cardNav" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               <div className={`sidebar-link ${currentView === 'teacher_exams' ? 'active' : ''}`} onClick={() => { setCurrentView('teacher_exams'); setEditingExam(null); }}>
                 <ClipboardList size={18} />
-                <span>Quản Lý Đề Thi</span>
+                <span>Manage Exams</span>
               </div>
               <div className={`sidebar-link ${currentView === 'teacher_classes' ? 'active' : ''}`} onClick={() => { setCurrentView('teacher_classes'); setEditingExam(null); }}>
                 <BookOpen size={18} />
-                <span>Quản Lý Lớp Học</span>
+                <span>Manage Classes</span>
               </div>
               <div className={`sidebar-link ${currentView === 'teacher_students' ? 'active' : ''}`} onClick={() => { setCurrentView('teacher_students'); setEditingExam(null); }}>
                 <Users size={18} />
-                <span>Tài Khoản Học Viên</span>
+                <span>Student Accounts</span>
               </div>
               <div className={`sidebar-link ${currentView === 'teacher_scores' ? 'active' : ''}`} onClick={() => { setCurrentView('teacher_scores'); setEditingExam(null); }}>
                 <Award size={18} />
-                <span>Bảng Điểm Báo Cáo</span>
+                <span>Score Reports</span>
               </div>
             </div>
             
             <button className="btn btn-secondary" style={{ marginTop: '1rem' }} onClick={fetchTeacherData}>
               <RefreshCw size={16} />
-              Tải Lại Dữ Liệu
+              Refresh Data
             </button>
           </aside>
 
@@ -534,8 +534,8 @@ export default function App() {
               <div className="glass-card animate-fade-in">
                 <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <div>
-                    <h2>Danh Sách Đề Thi Mẫu</h2>
-                    <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.9rem' }}>Hệ thống sinh sẵn form đề thi theo format chuẩn Cambridge.</p>
+                    <h2>Exam List</h2>
+                    <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.9rem' }}>Cambridge-format exam sheets. Create, edit and assign to classes.</p>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button className="btn btn-primary btn-sm" onClick={() => {
@@ -554,17 +554,17 @@ export default function App() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Tên Đề Thi</th>
-                        <th>Giao Cho Lớp</th>
-                        <th>Thời Gian</th>
-                        <th>Số Câu Hỏi</th>
-                        <th>Hành Động</th>
+                        <th>Exam Title</th>
+                        <th>Assigned Class</th>
+                        <th>Duration</th>
+                        <th>Answers Set</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {exams.length === 0 ? (
                         <tr>
-                          <td colSpan="5" style={{ textAlign: 'center', color: 'hsl(var(--text-muted))' }}>Chưa có đề thi nào được tạo.</td>
+                          <td colSpan="5" style={{ textAlign: 'center', color: 'hsl(var(--text-muted))' }}>No exams created yet.</td>
                         </tr>
                       ) : (
                         exams.map(ex => (
@@ -580,7 +580,7 @@ export default function App() {
                             <td>
                               <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button className="btn btn-secondary btn-sm" onClick={() => setEditingExam(ex)}>
-                                  Sửa Đáp Án
+                                  Edit Answers
                                 </button>
                                 <button className="btn btn-danger btn-sm" onClick={() => handleDeleteExam(ex.id)}>
                                   <Trash2 size={14} />
@@ -615,15 +615,15 @@ export default function App() {
 
                 <div className="exam-creator-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                   <div className="form-group">
-                    <label className="form-label">Tên đề thi (ví dụ: Cambridge Test 1)</label>
-                    <input className="form-input" type="text" value={editingExam.title} onChange={e => setEditingExam({ ...editingExam, title: e.target.value })} placeholder="Nhập tên đề..." required />
+                    <label className="form-label">Exam title (e.g. Cambridge Test 1)</label>
+                    <input className="form-input" type="text" value={editingExam.title} onChange={e => setEditingExam({ ...editingExam, title: e.target.value })} placeholder="Enter title..." required />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Thời gian làm bài (phút)</label>
+                    <label className="form-label">Duration (minutes)</label>
                     <input className="form-input" type="number" value={editingExam.durationMinutes} onChange={e => setEditingExam({ ...editingExam, durationMinutes: parseInt(e.target.value) || 0 })} required />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Giao cho lớp</label>
+                    <label className="form-label">Assign to class</label>
                     <select
                       className="form-input"
                       value={editingExam.assignedClass || 'All'}
@@ -673,35 +673,57 @@ export default function App() {
                   const activePNs = editingExam.activeParts?.[activeTab] ?? TEMPLATES[activeTab].parts.map(p => p.partNum);
                   if (!activePNs.includes(part.partNum)) return null;
                   const qArray = getQuestionArray(part.questionRange);
+                  const numSlots = part.slots || 1;
                   return (
                     <div key={part.partNum} className="exam-part-section animate-fade-in">
                       <h3>{part.title}</h3>
                       <p>{part.description}</p>
                       <div className="questions-grid">
                         {qArray.map(qNum => {
-                          const qKey = `${activeTab === 'reading' ? 'r' : 'l'}_${qNum}`;
+                          const prefix = activeTab === 'reading' ? 'r' : 'l';
+                          const qKey = `${prefix}_${qNum}`;
                           const currentVal = editingExam.keyAnswers[qKey] || '';
                           return (
-                            <div key={qNum} className="question-row">
-                              <span className="question-num">{qNum}</span>
-                              {part.type === 'mcq' ? (
-                                <div className="answer-mcq-options">
-                                  {part.options.map(opt => (
-                                    <button key={opt} type="button" className={`mcq-option-btn ${currentVal === opt ? 'selected' : ''}`}
-                                      onClick={() => setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [qKey]: opt } })}>
-                                      {opt}
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                <input className="answer-text-input" type="text" placeholder={part.placeholder}
-                                  style={part.uppercase ? { textTransform: 'uppercase' } : {}}
-                                  value={currentVal}
-                                  onChange={e => {
-                                    const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
-                                    setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [qKey]: val } });
-                                  }} />
-                              )}
+                            <div key={qNum} className="question-row" style={numSlots > 1 ? { flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem' } : {}}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+                                <span className="question-num">{qNum}</span>
+                                {part.type === 'mcq' ? (
+                                  <div className="answer-mcq-options">
+                                    {part.options.map(opt => (
+                                      <button key={opt} type="button" className={`mcq-option-btn ${currentVal === opt ? 'selected' : ''}`}
+                                        onClick={() => setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [qKey]: opt } })}>
+                                        {opt}
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <input className="answer-text-input" type="text"
+                                    placeholder={Array.isArray(part.placeholder) ? part.placeholder[0] : part.placeholder}
+                                    style={part.uppercase ? { textTransform: 'uppercase' } : {}}
+                                    value={currentVal}
+                                    onChange={e => {
+                                      const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
+                                      setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [qKey]: val } });
+                                    }} />
+                                )}
+                              </div>
+                              {numSlots > 1 && Array.from({ length: numSlots - 1 }, (_, si) => {
+                                const slotKey = `${qKey}_s${si + 2}`;
+                                const slotVal = editingExam.keyAnswers[slotKey] || '';
+                                return (
+                                  <div key={slotKey} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', paddingLeft: '2.5rem' }}>
+                                    <span style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))', minWidth: '1.8rem', textAlign: 'right' }}>+{si + 2}</span>
+                                    <input className="answer-text-input" type="text"
+                                      placeholder={Array.isArray(part.placeholder) ? (part.placeholder[si + 1] || 'Part...') : part.placeholder}
+                                      style={part.uppercase ? { textTransform: 'uppercase' } : {}}
+                                      value={slotVal}
+                                      onChange={e => {
+                                        const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
+                                        setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [slotKey]: val } });
+                                      }} />
+                                  </div>
+                                );
+                              })}
                             </div>
                           );
                         })}
@@ -715,8 +737,8 @@ export default function App() {
             {/* View 1c: Class Management */}
             {currentView === 'teacher_classes' && (
               <div className="glass-card animate-fade-in">
-                <h2>Quản Lý Lớp Học</h2>
-                <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem' }}>Quản lý danh sách lớp học của trung tâm.</p>
+                <h2>Manage Classes</h2>
+                <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem' }}>Create and manage class groups for your students.</p>
                 
                 <form onSubmit={handleAddClass} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '2rem', flexWrap: 'wrap' }}>
                   <div className="form-group" style={{ flex: 1, minWidth: '200px', marginBottom: 0 }}>
@@ -1287,44 +1309,67 @@ export default function App() {
 
           <div className="exam-layout">
             <div className="main-content">
-              {TEMPLATES[activeTab].parts
+                {TEMPLATES[activeTab].parts
                 .filter(part => {
                   const active = getActiveParts(activeExam, activeTab);
                   return active.includes(part.partNum);
                 })
                 .map(part => {
                 const qArray = getQuestionArray(part.questionRange);
+                const numSlots = part.slots || 1;
                 return (
                   <div key={part.partNum} className="glass-card" id={`part-section-${part.partNum}`}>
                     <h3 style={{ fontSize: '1.2rem', marginBottom: '0.25rem' }}>{part.title}</h3>
                     <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.85rem', marginBottom: '1.25rem' }}>{part.description}</p>
                     <div className="questions-grid">
                       {qArray.map(qNum => {
-                        const qKey = `${activeTab === 'reading' ? 'r' : 'l'}_${qNum}`;
+                        const prefix = activeTab === 'reading' ? 'r' : 'l';
+                        const qKey = `${prefix}_${qNum}`;
                         const currentAnswer = studentAnswers[qKey] || '';
+                        const isAnyAnswered = currentAnswer || (numSlots > 1 && Array.from({ length: numSlots - 1 }, (_, si) => studentAnswers[`${qKey}_s${si + 2}`] || '').some(Boolean));
                         return (
-                          <div key={qNum} className="question-row" id={`q-field-${qKey}`}>
-                            <span className="question-num" style={{ background: currentAnswer ? 'hsl(var(--primary))' : 'hsl(var(--bg-secondary))', color: currentAnswer ? '#fff' : 'hsl(var(--text-secondary))' }}>
-                              {qNum}
-                            </span>
-                            {part.type === 'mcq' ? (
-                              <div className="answer-mcq-options">
-                                {part.options.map(opt => (
-                                  <button key={opt} type="button" className={`mcq-option-btn ${currentAnswer === opt ? 'selected' : ''}`}
-                                    onClick={() => setStudentAnswers({ ...studentAnswers, [qKey]: opt })}>
-                                    {opt}
-                                  </button>
-                                ))}
-                              </div>
-                            ) : (
-                              <input className="answer-text-input" type="text" placeholder={part.placeholder}
-                                style={part.uppercase ? { textTransform: 'uppercase' } : {}}
-                                value={currentAnswer}
-                                onChange={e => {
-                                  const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
-                                  setStudentAnswers({ ...studentAnswers, [qKey]: val });
-                                }} />
-                            )}
+                          <div key={qNum} className="question-row" id={`q-field-${qKey}`} style={numSlots > 1 ? { flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem' } : {}}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+                              <span className="question-num" style={{ background: isAnyAnswered ? 'hsl(var(--primary))' : 'hsl(var(--bg-secondary))', color: isAnyAnswered ? '#fff' : 'hsl(var(--text-secondary))' }}>
+                                {qNum}
+                              </span>
+                              {part.type === 'mcq' ? (
+                                <div className="answer-mcq-options">
+                                  {part.options.map(opt => (
+                                    <button key={opt} type="button" className={`mcq-option-btn ${currentAnswer === opt ? 'selected' : ''}`}
+                                      onClick={() => setStudentAnswers({ ...studentAnswers, [qKey]: opt })}>
+                                      {opt}
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <input className="answer-text-input" type="text"
+                                  placeholder={Array.isArray(part.placeholder) ? part.placeholder[0] : part.placeholder}
+                                  style={part.uppercase ? { textTransform: 'uppercase' } : {}}
+                                  value={currentAnswer}
+                                  onChange={e => {
+                                    const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
+                                    setStudentAnswers({ ...studentAnswers, [qKey]: val });
+                                  }} />
+                              )}
+                            </div>
+                            {numSlots > 1 && Array.from({ length: numSlots - 1 }, (_, si) => {
+                              const slotKey = `${qKey}_s${si + 2}`;
+                              const slotAnswer = studentAnswers[slotKey] || '';
+                              return (
+                                <div key={slotKey} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', paddingLeft: '2.5rem' }}>
+                                  <span style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))', minWidth: '1.8rem', textAlign: 'right' }}>+{si + 2}</span>
+                                  <input className="answer-text-input" type="text"
+                                    placeholder={Array.isArray(part.placeholder) ? (part.placeholder[si + 1] || 'Part...') : part.placeholder}
+                                    style={part.uppercase ? { textTransform: 'uppercase' } : {}}
+                                    value={slotAnswer}
+                                    onChange={e => {
+                                      const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
+                                      setStudentAnswers({ ...studentAnswers, [slotKey]: val });
+                                    }} />
+                                </div>
+                              );
+                            })}
                           </div>
                         );
                       })}
