@@ -446,11 +446,12 @@ export default function App() {
     TEMPLATES.reading.parts.forEach(part => {
       if (readingActive.includes(part.partNum)) {
         const qArray = getQuestionArray(part.questionRange);
-        const slots = part.slots || 1;
         qArray.forEach(qNum => {
+          const qKey = `r_${qNum}`;
+          const slots = editingExam.questionSlots?.[qKey] || part.slots || 1;
           for (let s = 1; s <= slots; s++) {
-            const qKey = s === 1 ? `r_${qNum}` : `r_${qNum}_s${s}`;
-            const val = editingExam.keyAnswers?.[qKey];
+            const sKey = s === 1 ? qKey : `${qKey}_s${s}`;
+            const val = editingExam.keyAnswers?.[sKey];
             if (!val || String(val).trim() === '') {
               const label = slots > 1 ? `Question ${qNum}.${s}` : `Question ${qNum}`;
               missingQuestions.push(`Reading Part ${part.partNum} (${label})`);
@@ -465,11 +466,12 @@ export default function App() {
     TEMPLATES.listening.parts.forEach(part => {
       if (listeningActive.includes(part.partNum)) {
         const qArray = getQuestionArray(part.questionRange);
-        const slots = part.slots || 1;
         qArray.forEach(qNum => {
+          const qKey = `l_${qNum}`;
+          const slots = editingExam.questionSlots?.[qKey] || part.slots || 1;
           for (let s = 1; s <= slots; s++) {
-            const qKey = s === 1 ? `l_${qNum}` : `l_${qNum}_s${s}`;
-            const val = editingExam.keyAnswers?.[qKey];
+            const sKey = s === 1 ? qKey : `${qKey}_s${s}`;
+            const val = editingExam.keyAnswers?.[sKey];
             if (!val || String(val).trim() === '') {
               const label = slots > 1 ? `Question ${qNum}.${s}` : `Question ${qNum}`;
               missingQuestions.push(`Listening Part ${part.partNum} (${label})`);
@@ -981,43 +983,116 @@ export default function App() {
                         {qArray.map(qNum => {
                           const prefix = activeTab === 'reading' ? 'r' : 'l';
                           const qKey = `${prefix}_${qNum}`;
-                          const slots = part.slots || 1;
-                          const slotKeys = Array.from({ length: slots }, (_, i) => i === 0 ? qKey : `${qKey}_s${i + 1}`);
+                          const customSlots = editingExam.questionSlots?.[qKey] || (part.slots || 1);
+                          const slotKeys = Array.from({ length: customSlots }, (_, i) => i === 0 ? qKey : `${qKey}_s${i + 1}`);
 
-                          return slotKeys.map((sKey, sIdx) => {
-                            const currentVal = editingExam.keyAnswers[sKey] || '';
-                            const isMissing = !currentVal || !currentVal.trim();
-                            const placeholder = Array.isArray(part.placeholder) ? (part.placeholder[sIdx] || 'Type word...') : part.placeholder;
-                            const displayNum = slots > 1 ? `${qNum}.${sIdx + 1}` : `${qNum}`;
+                          return (
+                            <div key={qKey} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', borderBottom: '1px dashed hsla(var(--border-color) / 0.25)', paddingBottom: '0.5rem' }}>
+                              {slotKeys.map((sKey, sIdx) => {
+                                const currentVal = editingExam.keyAnswers[sKey] || '';
+                                const isMissing = !currentVal || !currentVal.trim();
+                                const placeholder = Array.isArray(part.placeholder) ? (part.placeholder[sIdx] || `Word ${sIdx + 1}...`) : (part.placeholder || `Word ${sIdx + 1}...`);
+                                const displayNum = customSlots > 1 ? `${qNum}.${sIdx + 1}` : `${qNum}`;
 
-                            return (
-                              <div key={sKey} className="question-row" style={isMissing ? { border: '1px dashed hsla(var(--danger) / 0.5)', background: 'hsla(var(--danger) / 0.03)' } : {}}>
-                                <span className="question-num">{displayNum}</span>
-                                {part.type === 'mcq' ? (
-                                  <div className="answer-mcq-options">
-                                    {part.options.map(opt => (
-                                      <button key={opt} type="button" className={`mcq-option-btn ${currentVal === opt ? 'selected' : ''}`}
-                                        onClick={() => setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [sKey]: opt } })}>
-                                        {opt}
-                                      </button>
-                                    ))}
+                                return (
+                                  <div key={sKey} className="question-row" style={isMissing ? { border: '1px dashed hsla(var(--danger) / 0.5)', background: 'hsla(var(--danger) / 0.03)' } : {}}>
+                                    <span className="question-num">{displayNum}</span>
+                                    {part.type === 'mcq' ? (
+                                      <div className="answer-mcq-options">
+                                        {part.options.map(opt => (
+                                          <button key={opt} type="button" className={`mcq-option-btn ${currentVal === opt ? 'selected' : ''}`}
+                                            onClick={() => setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [sKey]: opt } })}>
+                                            {opt}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, flexWrap: 'wrap' }}>
+                                        <input className="answer-text-input" type="text" placeholder={placeholder}
+                                          style={{
+                                            flex: 1,
+                                            minWidth: '130px',
+                                            ...(part.uppercase ? { textTransform: 'uppercase' } : {}),
+                                            border: isMissing ? '1.5px solid hsla(var(--danger) / 0.7)' : '1px solid hsl(var(--border-color))'
+                                          }}
+                                          value={currentVal}
+                                          required
+                                          onChange={e => {
+                                            const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
+                                            setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [sKey]: val } });
+                                          }} />
+
+                                        {sIdx === slotKeys.length - 1 && (
+                                          <button
+                                            type="button"
+                                            title="Add another input box for this question"
+                                            style={{
+                                              background: 'hsla(var(--primary) / 0.1)',
+                                              color: 'hsl(var(--primary))',
+                                              border: '1px solid hsla(var(--primary) / 0.3)',
+                                              borderRadius: 'var(--radius-sm)',
+                                              padding: '0.35rem 0.6rem',
+                                              cursor: 'pointer',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: '0.25rem',
+                                              fontSize: '0.75rem',
+                                              fontWeight: '600',
+                                              whiteSpace: 'nowrap'
+                                            }}
+                                            onClick={() => {
+                                              const nextSlots = customSlots + 1;
+                                              setEditingExam({
+                                                ...editingExam,
+                                                questionSlots: {
+                                                  ...(editingExam.questionSlots || {}),
+                                                  [qKey]: nextSlots
+                                                }
+                                              });
+                                            }}
+                                          >
+                                            <Plus size={14} /> Add Input
+                                          </button>
+                                        )}
+
+                                        {sIdx > 0 && (
+                                          <button
+                                            type="button"
+                                            title="Delete this input box"
+                                            style={{
+                                              background: 'hsla(var(--danger) / 0.1)',
+                                              color: 'hsl(var(--danger))',
+                                              border: '1px solid hsla(var(--danger) / 0.3)',
+                                              borderRadius: 'var(--radius-sm)',
+                                              padding: '0.35rem 0.45rem',
+                                              cursor: 'pointer',
+                                              display: 'flex',
+                                              alignItems: 'center'
+                                            }}
+                                            onClick={() => {
+                                              const updatedKeys = { ...editingExam.keyAnswers };
+                                              delete updatedKeys[sKey];
+                                              const nextSlots = Math.max(1, customSlots - 1);
+                                              setEditingExam({
+                                                ...editingExam,
+                                                keyAnswers: updatedKeys,
+                                                questionSlots: {
+                                                  ...(editingExam.questionSlots || {}),
+                                                  [qKey]: nextSlots
+                                                }
+                                              });
+                                            }}
+                                          >
+                                            <Trash2 size={14} />
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
-                                ) : (
-                                  <input className="answer-text-input" type="text" placeholder={placeholder}
-                                    style={{
-                                      ...(part.uppercase ? { textTransform: 'uppercase' } : {}),
-                                      border: isMissing ? '1.5px solid hsla(var(--danger) / 0.7)' : '1px solid hsl(var(--border-color))'
-                                    }}
-                                    value={currentVal}
-                                    required
-                                    onChange={e => {
-                                      const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
-                                      setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [sKey]: val } });
-                                    }} />
-                                )}
-                              </div>
-                            );
-                          });
+                                );
+                              })}
+                            </div>
+                          );
                         })}
                       </div>
                     </div>
@@ -1884,12 +1959,12 @@ export default function App() {
                         {qArray.map(qNum => {
                           const prefix = activeTab === 'reading' ? 'r' : 'l';
                           const qKey = `${prefix}_${qNum}`;
-                          const slots = part.slots || 1;
+                          const slots = activeExam?.questionSlots?.[qKey] || part.slots || 1;
                           const slotKeys = Array.from({ length: slots }, (_, i) => i === 0 ? qKey : `${qKey}_s${i + 1}`);
 
                           return slotKeys.map((sKey, sIdx) => {
                             const currentAnswer = studentAnswers[sKey] || '';
-                            const placeholder = Array.isArray(part.placeholder) ? (part.placeholder[sIdx] || 'Type word...') : part.placeholder;
+                            const placeholder = Array.isArray(part.placeholder) ? (part.placeholder[sIdx] || `Word ${sIdx + 1}...`) : (part.placeholder || `Word ${sIdx + 1}...`);
                             const displayNum = slots > 1 ? `${qNum}.${sIdx + 1}` : `${qNum}`;
 
                             return (
@@ -2031,7 +2106,7 @@ export default function App() {
                     {qArray.map(qNum => {
                       const prefix = activeTab === 'reading' ? 'r' : 'l';
                       const qKey = `${prefix}_${qNum}`;
-                      const slots = part.slots || 1;
+                      const slots = activeExam?.questionSlots?.[qKey] || part.slots || 1;
                       const slotKeys = Array.from({ length: slots }, (_, i) => i === 0 ? qKey : `${qKey}_s${i + 1}`);
 
                       return slotKeys.map((sKey, sIdx) => {

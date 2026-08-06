@@ -32,17 +32,29 @@ function getActiveNums(activeParts, tab) {
   return activeParts?.[tab] ?? all;
 }
 
-function getActiveQuestionKeys(activeParts, prefix, tab) {
-  const activePartNums = getActiveNums(activeParts, tab);
+function getActiveQuestionKeys(exam, prefix, tab) {
+  const activePartNums = getActiveNums(exam?.activeParts, tab);
+  const keyAnswers = exam?.keyAnswers || {};
+  const questionSlots = exam?.questionSlots || {};
   const keys = [];
+
   for (const p of PART_RANGES[tab]) {
     if (!activePartNums.includes(p.partNum)) continue;
     for (let q = p.range[0]; q <= p.range[1]; q++) {
-      keys.push(`${prefix}_${q}`);
-      // Reading Part 4 has 2 graded slots per question
-      if (tab === 'reading' && p.partNum === 4) {
-        keys.push(`${prefix}_${q}_s2`);
+      const baseKey = `${prefix}_${q}`;
+      keys.push(baseKey);
+
+      const slots = questionSlots[baseKey] || (tab === 'reading' && p.partNum === 4 ? 2 : 1);
+      for (let s = 2; s <= slots; s++) {
+        const slotKey = `${baseKey}_s${s}`;
+        if (!keys.includes(slotKey)) keys.push(slotKey);
       }
+
+      Object.keys(keyAnswers).forEach(k => {
+        if (k.startsWith(`${baseKey}_s`) && !keys.includes(k)) {
+          keys.push(k);
+        }
+      });
     }
   }
   return keys;
@@ -397,8 +409,8 @@ app.post('/api/submissions', async (req, res) => {
   const activeParts = exam.activeParts || null;
 
   // Get active question keys
-  const readingKeys = getActiveQuestionKeys(activeParts, 'r', 'reading');
-  const listeningKeys = getActiveQuestionKeys(activeParts, 'l', 'listening');
+  const readingKeys = getActiveQuestionKeys(exam, 'r', 'reading');
+  const listeningKeys = getActiveQuestionKeys(exam, 'l', 'listening');
 
   let score = 0, readingScore = 0, listeningScore = 0;
   const details = {};
