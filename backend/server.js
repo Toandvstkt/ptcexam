@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 const db = require('./db');
 
 const app = express();
@@ -8,9 +7,6 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
-
-// Serve static frontend assets in production
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Helper to normalize answers for grading
 function evaluateAnswer(studentAns, keyAns) {
@@ -315,11 +311,6 @@ app.post('/api/submissions', async (req, res) => {
 
   await db.saveSubmission(submission);
   res.status(201).json(submission);
-});
-
-// Catch-all route to serve the React application
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
 app.listen(PORT, () => {
