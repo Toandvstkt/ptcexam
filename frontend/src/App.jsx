@@ -1445,14 +1445,14 @@ export default function App() {
             <h2>Exam Results</h2>
             <p style={{ color: 'hsl(var(--text-secondary))' }}>Exam: {reportSubmission.examTitle}</p>
             
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', margin: '1.5rem 0', flexWrap: 'wrap' }}>
-              <div className="results-score-circle">
-                <span className="results-score-num">{Math.round((reportSubmission.score / reportSubmission.totalQuestions) * 100)}</span>
-                <span className="results-score-label">/ 100 Total</span>
-              </div>
+            <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', alignItems: 'center', margin: '1.5rem 0', flexWrap: 'wrap' }}>
               <div className="results-score-circle reading">
                 <span className="results-score-num">{reportSubmission.readingScore || 0}</span>
                 <span className="results-score-label">/ {reportSubmission.totalQuestions - 30} Reading</span>
+              </div>
+              <div className="results-score-circle total-main">
+                <span className="results-score-num">{Math.round((reportSubmission.score / reportSubmission.totalQuestions) * 100)}</span>
+                <span className="results-score-label">/ 100 Total</span>
               </div>
               <div className="results-score-circle listening">
                 <span className="results-score-num">{reportSubmission.listeningScore || 0}</span>
