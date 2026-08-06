@@ -986,34 +986,36 @@ export default function App() {
                           const customSlots = editingExam.questionSlots?.[qKey] || (part.slots || 1);
                           const slotKeys = Array.from({ length: customSlots }, (_, i) => i === 0 ? qKey : `${qKey}_s${i + 1}`);
 
-                          return (
-                            <div key={qKey} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', borderBottom: '1px dashed hsla(var(--border-color) / 0.25)', paddingBottom: '0.5rem' }}>
-                              {slotKeys.map((sKey, sIdx) => {
-                                const currentVal = editingExam.keyAnswers[sKey] || '';
-                                const isMissing = !currentVal || !currentVal.trim();
-                                const placeholder = Array.isArray(part.placeholder) ? (part.placeholder[sIdx] || `Word ${sIdx + 1}...`) : (part.placeholder || `Word ${sIdx + 1}...`);
-                                const displayNum = customSlots > 1 ? `${qNum}.${sIdx + 1}` : `${qNum}`;
+                          // Check if any slot in this question is missing key answer
+                          const isAnyMissing = slotKeys.some(sKey => !editingExam.keyAnswers[sKey] || !editingExam.keyAnswers[sKey].trim());
 
-                                return (
-                                  <div key={sKey} className="question-row" style={isMissing ? { border: '1px dashed hsla(var(--danger) / 0.5)', background: 'hsla(var(--danger) / 0.03)' } : {}}>
-                                    <span className="question-num">{displayNum}</span>
-                                    {part.type === 'mcq' ? (
-                                      <div className="answer-mcq-options">
-                                        {part.options.map(opt => (
-                                          <button key={opt} type="button" className={`mcq-option-btn ${currentVal === opt ? 'selected' : ''}`}
-                                            onClick={() => setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [sKey]: opt } })}>
-                                            {opt}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, flexWrap: 'wrap' }}>
+                          return (
+                            <div key={qKey} className="question-row" style={isAnyMissing ? { border: '1px dashed hsla(var(--danger) / 0.5)', background: 'hsla(var(--danger) / 0.03)', alignItems: 'flex-start' } : { alignItems: 'flex-start' }}>
+                              <span className="question-num" style={{ marginTop: '0.2rem' }}>{qNum}</span>
+                              {part.type === 'mcq' ? (
+                                <div className="answer-mcq-options">
+                                  {part.options.map(opt => (
+                                    <button key={opt} type="button" className={`mcq-option-btn ${editingExam.keyAnswers[qKey] === opt ? 'selected' : ''}`}
+                                      onClick={() => setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [qKey]: opt } })}>
+                                      {opt}
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: 1, width: '100%' }}>
+                                  {slotKeys.map((sKey, sIdx) => {
+                                    const currentVal = editingExam.keyAnswers[sKey] || '';
+                                    const isSlotMissing = !currentVal || !currentVal.trim();
+                                    const placeholder = Array.isArray(part.placeholder) ? (part.placeholder[sIdx] || `Word ${sIdx + 1}...`) : (part.placeholder || `Word ${sIdx + 1}...`);
+
+                                    return (
+                                      <div key={sKey} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', width: '100%' }}>
                                         <input className="answer-text-input" type="text" placeholder={placeholder}
                                           style={{
                                             flex: 1,
                                             minWidth: '130px',
                                             ...(part.uppercase ? { textTransform: 'uppercase' } : {}),
-                                            border: isMissing ? '1.5px solid hsla(var(--danger) / 0.7)' : '1px solid hsl(var(--border-color))'
+                                            border: isSlotMissing ? '1.5px solid hsla(var(--danger) / 0.7)' : '1px solid hsl(var(--border-color))'
                                           }}
                                           value={currentVal}
                                           required
@@ -1021,39 +1023,6 @@ export default function App() {
                                             const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
                                             setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [sKey]: val } });
                                           }} />
-
-                                        {sIdx === slotKeys.length - 1 && (
-                                          <button
-                                            type="button"
-                                            title="Add another input box for this question"
-                                            style={{
-                                              background: 'hsla(var(--primary) / 0.1)',
-                                              color: 'hsl(var(--primary))',
-                                              border: '1px solid hsla(var(--primary) / 0.3)',
-                                              borderRadius: 'var(--radius-sm)',
-                                              padding: '0.35rem 0.6rem',
-                                              cursor: 'pointer',
-                                              display: 'flex',
-                                              alignItems: 'center',
-                                              gap: '0.25rem',
-                                              fontSize: '0.75rem',
-                                              fontWeight: '600',
-                                              whiteSpace: 'nowrap'
-                                            }}
-                                            onClick={() => {
-                                              const nextSlots = customSlots + 1;
-                                              setEditingExam({
-                                                ...editingExam,
-                                                questionSlots: {
-                                                  ...(editingExam.questionSlots || {}),
-                                                  [qKey]: nextSlots
-                                                }
-                                              });
-                                            }}
-                                          >
-                                            <Plus size={14} /> Add Input
-                                          </button>
-                                        )}
 
                                         {sIdx > 0 && (
                                           <button
@@ -1087,10 +1056,42 @@ export default function App() {
                                           </button>
                                         )}
                                       </div>
-                                    )}
+                                    );
+                                  })}
+
+                                  <div style={{ marginTop: '0.1rem' }}>
+                                    <button
+                                      type="button"
+                                      title="Add another input box for this question"
+                                      style={{
+                                        background: 'hsla(var(--primary) / 0.08)',
+                                        color: 'hsl(var(--primary))',
+                                        border: '1px dashed hsla(var(--primary) / 0.4)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        padding: '0.25rem 0.5rem',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.25rem',
+                                        fontSize: '0.75rem',
+                                        fontWeight: '600'
+                                      }}
+                                      onClick={() => {
+                                        const nextSlots = customSlots + 1;
+                                        setEditingExam({
+                                          ...editingExam,
+                                          questionSlots: {
+                                            ...(editingExam.questionSlots || {}),
+                                            [qKey]: nextSlots
+                                          }
+                                        });
+                                      }}
+                                    >
+                                      <Plus size={13} /> Add Word Input
+                                    </button>
                                   </div>
-                                );
-                              })}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -1961,38 +1962,42 @@ export default function App() {
                           const qKey = `${prefix}_${qNum}`;
                           const slots = activeExam?.questionSlots?.[qKey] || part.slots || 1;
                           const slotKeys = Array.from({ length: slots }, (_, i) => i === 0 ? qKey : `${qKey}_s${i + 1}`);
+                          const isAnyAnswered = slotKeys.some(sKey => studentAnswers[sKey] && studentAnswers[sKey].trim());
 
-                          return slotKeys.map((sKey, sIdx) => {
-                            const currentAnswer = studentAnswers[sKey] || '';
-                            const placeholder = Array.isArray(part.placeholder) ? (part.placeholder[sIdx] || `Word ${sIdx + 1}...`) : (part.placeholder || `Word ${sIdx + 1}...`);
-                            const displayNum = slots > 1 ? `${qNum}.${sIdx + 1}` : `${qNum}`;
+                          return (
+                            <div key={qKey} className="question-row" id={`q-field-${qKey}`} style={{ alignItems: 'flex-start' }}>
+                              <span className="question-num" style={{ marginTop: '0.2rem', background: isAnyAnswered ? 'hsl(var(--primary))' : 'hsl(var(--bg-secondary))', color: isAnyAnswered ? '#fff' : 'hsl(var(--text-secondary))' }}>
+                                {qNum}
+                              </span>
+                              {part.type === 'mcq' ? (
+                                <div className="answer-mcq-options">
+                                  {part.options.map(opt => (
+                                    <button key={opt} type="button" className={`mcq-option-btn ${studentAnswers[qKey] === opt ? 'selected' : ''}`}
+                                      onClick={() => setStudentAnswers({ ...studentAnswers, [qKey]: opt })}>
+                                      {opt}
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: 1, width: '100%' }}>
+                                  {slotKeys.map((sKey, sIdx) => {
+                                    const currentAnswer = studentAnswers[sKey] || '';
+                                    const placeholder = Array.isArray(part.placeholder) ? (part.placeholder[sIdx] || `Word ${sIdx + 1}...`) : (part.placeholder || `Word ${sIdx + 1}...`);
 
-                            return (
-                              <div key={sKey} className="question-row" id={`q-field-${sKey}`}>
-                                <span className="question-num" style={{ background: currentAnswer ? 'hsl(var(--primary))' : 'hsl(var(--bg-secondary))', color: currentAnswer ? '#fff' : 'hsl(var(--text-secondary))' }}>
-                                  {displayNum}
-                                </span>
-                                {part.type === 'mcq' ? (
-                                  <div className="answer-mcq-options">
-                                    {part.options.map(opt => (
-                                      <button key={opt} type="button" className={`mcq-option-btn ${currentAnswer === opt ? 'selected' : ''}`}
-                                        onClick={() => setStudentAnswers({ ...studentAnswers, [sKey]: opt })}>
-                                        {opt}
-                                      </button>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <input className="answer-text-input" type="text" placeholder={placeholder}
-                                    style={part.uppercase ? { textTransform: 'uppercase' } : {}}
-                                    value={currentAnswer}
-                                    onChange={e => {
-                                      const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
-                                      setStudentAnswers({ ...studentAnswers, [sKey]: val });
-                                    }} />
-                                )}
-                              </div>
-                            );
-                          });
+                                    return (
+                                      <input key={sKey} className="answer-text-input" type="text" placeholder={placeholder}
+                                        style={part.uppercase ? { textTransform: 'uppercase' } : {}}
+                                        value={currentAnswer}
+                                        onChange={e => {
+                                          const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
+                                          setStudentAnswers({ ...studentAnswers, [sKey]: val });
+                                        }} />
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
                         })}
                       </div>
                     </div>
@@ -2109,32 +2114,38 @@ export default function App() {
                       const slots = activeExam?.questionSlots?.[qKey] || part.slots || 1;
                       const slotKeys = Array.from({ length: slots }, (_, i) => i === 0 ? qKey : `${qKey}_s${i + 1}`);
 
-                      return slotKeys.map((sKey, sIdx) => {
-                        const detail = reportSubmission.details[sKey] || { studentAnswer: '', correctAnswer: '', isCorrect: false };
-                        const displayKey = detail.correctAnswer.split('|').join(' or ');
-                        const displayNum = slots > 1 ? `${qNum}.${sIdx + 1}` : `${qNum}`;
+                      const allCorrect = slotKeys.every(sKey => reportSubmission.details[sKey]?.isCorrect);
 
-                        return (
-                          <div key={sKey} className={`result-item-card ${detail.isCorrect ? 'correct' : 'incorrect'}`}>
-                            <div className="result-indicator">
-                              {detail.isCorrect ? <CheckCircle size={18} /> : <XCircle size={18} />}
-                            </div>
-                            <div className="result-text-info">
-                              <strong style={{ display: 'block', fontSize: '0.9rem' }}>Question {displayNum}</strong>
-                              <p style={{ fontSize: '0.8rem' }}>
-                                Your answer: <strong className={detail.isCorrect ? 'text-success' : 'text-danger'}>
-                                  {detail.studentAnswer || '(Empty)'}
-                                </strong>
-                              </p>
-                              {!detail.isCorrect && (
-                                <p style={{ fontSize: '0.8rem', opacity: 0.9 }}>
-                                  Correct answer: <strong className="text-success">{displayKey}</strong>
-                                </p>
-                              )}
-                            </div>
+                      return (
+                        <div key={qKey} className={`result-item-card ${allCorrect ? 'correct' : 'incorrect'}`}>
+                          <div className="result-indicator">
+                            {allCorrect ? <CheckCircle size={18} /> : <XCircle size={18} />}
                           </div>
-                        );
-                      });
+                          <div className="result-text-info" style={{ width: '100%' }}>
+                            <strong style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.2rem' }}>Question {qNum}</strong>
+                            {slotKeys.map((sKey, sIdx) => {
+                              const detail = reportSubmission.details[sKey] || { studentAnswer: '', correctAnswer: '', isCorrect: false };
+                              const displayKey = detail.correctAnswer.split('|').join(' or ');
+                              const slotLabel = slots > 1 ? `Word ${sIdx + 1}: ` : '';
+
+                              return (
+                                <div key={sKey} style={{ marginTop: sIdx > 0 ? '0.3rem' : 0 }}>
+                                  <p style={{ fontSize: '0.8rem', margin: 0 }}>
+                                    {slotLabel}Your answer: <strong className={detail.isCorrect ? 'text-success' : 'text-danger'}>
+                                      {detail.studentAnswer || '(Empty)'}
+                                    </strong>
+                                  </p>
+                                  {!detail.isCorrect && (
+                                    <p style={{ fontSize: '0.8rem', opacity: 0.9, margin: 0 }}>
+                                      Correct answer: <strong className="text-success">{displayKey}</strong>
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
                     })}
                   </div>
                 </div>
