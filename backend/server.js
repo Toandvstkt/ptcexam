@@ -39,6 +39,10 @@ function getActiveQuestionKeys(activeParts, prefix, tab) {
     if (!activePartNums.includes(p.partNum)) continue;
     for (let q = p.range[0]; q <= p.range[1]; q++) {
       keys.push(`${prefix}_${q}`);
+      // Reading Part 4 has 2 graded slots per question
+      if (tab === 'reading' && p.partNum === 4) {
+        keys.push(`${prefix}_${q}_s2`);
+      }
     }
   }
   return keys;
@@ -84,27 +88,53 @@ app.post('/api/users', async (req, res) => {
   res.status(201).json(newUser);
 });
 
-// Bulk import students from CSV
+// Bulk import students from CSV or list
 app.post('/api/users/bulk', async (req, res) => {
-  if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
-  const { students } = req.body; // [{ username, password, className }]
+  if (getHeaderVal(req, 'x-user-role') !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
+  const { students, defaultClass } = req.body; // [{ username, password, className }]
   if (!Array.isArray(students) || students.length === 0) {
     return res.status(400).json({ error: 'No student data provided.' });
   }
+
   const existingUsers = await db.getUsers();
-  const results = { created: [], skipped: [], errors: [] };
+  const existingClasses = await db.getClasses();
+  const results = { created: [], updated: [], errors: [] };
 
   for (const s of students) {
-    if (!s.username || !s.password) { results.errors.push(`Row missing username/password`); continue; }
-    if (existingUsers.some(u => u.username.toLowerCase() === s.username.toLowerCase())) {
-      results.skipped.push(s.username); continue;
+    const username = (s.username || s.name || '').trim();
+    if (!username) { results.errors.push(`Row missing username`); continue; }
+    const password = (s.password || '123456').trim();
+    const className = (s.className || s.class || defaultClass || '').trim();
+
+    // Auto-create class if it doesn't exist yet
+    if (className && !existingClasses.some(c => c.name.toLowerCase() === className.toLowerCase())) {
+      const newCls = { id: 'c-' + Date.now() + Math.floor(Math.random() * 100), name: className };
+      await db.saveClass(newCls);
+      existingClasses.push(newCls);
     }
-    const newUser = { id: 'u-' + Date.now() + Math.random(), username: s.username, password: s.password, className: s.className || '', role: 'student' };
-    await db.saveUser(newUser);
-    existingUsers.push(newUser);
-    results.created.push(s.username);
+
+    const existingIndex = existingUsers.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
+    if (existingIndex !== -1) {
+      const userToUpdate = existingUsers[existingIndex];
+      userToUpdate.password = password || userToUpdate.password;
+      if (className) userToUpdate.className = className;
+      await db.saveUser(userToUpdate);
+      results.updated.push(username);
+    } else {
+      const newUser = {
+        id: 'u-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        username,
+        password,
+        className: className || '',
+        role: 'student'
+      };
+      await db.saveUser(newUser);
+      existingUsers.push(newUser);
+      results.created.push(username);
+    }
   }
-  res.json(results);
+
+  res.json({ success: true, createdCount: results.created.length, updatedCount: results.updated.length, results });
 });
 
 app.delete('/api/users/:id', async (req, res) => {
@@ -138,19 +168,53 @@ app.delete('/api/classes/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+function getHeaderVal(req, name) {
+  const val = req.headers[name];
+  if (!val) return '';
+  try {
+    return decodeURIComponent(val);
+  } catch (e) {
+    return val;
+  }
+}
+
 // ---------------- EXAMS API ----------------
 
 app.get('/api/exams', async (req, res) => {
   const exams = await db.getExams();
-  const role = req.headers['x-user-role'];
-  const userId = req.headers['x-user-id'];
+  const role = getHeaderVal(req, 'x-user-role');
+  const userId = getHeaderVal(req, 'x-user-id');
+  const usernameHeader = getHeaderVal(req, 'x-user-username');
+  const classHeader = getHeaderVal(req, 'x-user-classname');
+
   if (role === 'student') {
     const users = await db.getUsers();
-    const student = users.find(u => u.id === userId);
-    const studentClass = student ? (student.className || '') : '';
+    const student = users.find(u => u.id === userId || (usernameHeader && u.username.toLowerCase() === usernameHeader.toLowerCase()));
+    const studentClass = (student && student.className) ? student.className : classHeader;
+
     const filtered = exams.filter(ex => {
-      const assigned = ex.assignedClass || 'All';
-      return assigned === 'All' || assigned === '' || assigned.toLowerCase() === studentClass.toLowerCase();
+      const assignedList = Array.isArray(ex.assignedClasses) && ex.assignedClasses.length > 0
+        ? ex.assignedClasses
+        : (ex.assignedClass ? ex.assignedClass.split(',').map(s => s.trim()) : ['All']);
+      
+      const isAssignedToClass = assignedList.includes('All') || assignedList.some(c => c.toLowerCase() === studentClass.toLowerCase());
+      if (!isAssignedToClass) return false;
+
+      // Case-insensitive lookup in assignments
+      const assignments = ex.assignments || {};
+      let assignInfo = null;
+      for (const key of Object.keys(assignments)) {
+        if (key.toLowerCase() === studentClass.toLowerCase()) {
+          assignInfo = assignments[key];
+          break;
+        }
+      }
+
+      // If status is explicitly unassigned or ended, hide from student
+      if (assignInfo && (assignInfo.status === 'unassigned' || assignInfo.status === 'ended')) {
+        return false;
+      }
+      return true;
     });
     return res.json(filtered.map(({ keyAnswers, ...rest }) => rest));
   }
@@ -160,14 +224,31 @@ app.get('/api/exams', async (req, res) => {
 app.get('/api/exams/:id', async (req, res) => {
   const exam = await db.getExamById(req.params.id);
   if (!exam) return res.status(404).json({ error: 'Exam not found.' });
-  const role = req.headers['x-user-role'];
-  const userId = req.headers['x-user-id'];
+  const role = getHeaderVal(req, 'x-user-role');
+  const userId = getHeaderVal(req, 'x-user-id');
+  const usernameHeader = getHeaderVal(req, 'x-user-username');
+  const classHeader = getHeaderVal(req, 'x-user-classname');
+
   if (role === 'student') {
     const users = await db.getUsers();
-    const student = users.find(u => u.id === userId);
-    const studentClass = student ? (student.className || '') : '';
-    const assigned = exam.assignedClass || 'All';
-    if (assigned !== 'All' && assigned !== '' && assigned.toLowerCase() !== studentClass.toLowerCase()) {
+    const student = users.find(u => u.id === userId || (usernameHeader && u.username.toLowerCase() === usernameHeader.toLowerCase()));
+    const studentClass = (student && student.className) ? student.className : classHeader;
+
+    const assignedList = Array.isArray(exam.assignedClasses) && exam.assignedClasses.length > 0
+      ? exam.assignedClasses
+      : (exam.assignedClass ? exam.assignedClass.split(',').map(s => s.trim()) : ['All']);
+    const isAssigned = assignedList.includes('All') || assignedList.some(c => c.toLowerCase() === studentClass.toLowerCase());
+
+    const assignments = exam.assignments || {};
+    let assignInfo = null;
+    for (const key of Object.keys(assignments)) {
+      if (key.toLowerCase() === studentClass.toLowerCase()) {
+        assignInfo = assignments[key];
+        break;
+      }
+    }
+
+    if (!isAssigned || (assignInfo && (assignInfo.status === 'unassigned' || assignInfo.status === 'ended'))) {
       return res.status(403).json({ error: 'You do not have access to this exam.' });
     }
     const { keyAnswers, ...rest } = exam;
@@ -177,46 +258,137 @@ app.get('/api/exams/:id', async (req, res) => {
 });
 
 app.post('/api/exams', async (req, res) => {
-  if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
-  const { id, title, durationMinutes, keyAnswers, assignedClass, activeParts } = req.body;
+  if (getHeaderVal(req, 'x-user-role') !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
+  const { id, title, durationMinutes, keyAnswers, assignedClass, assignedClasses, activeParts } = req.body;
   if (!title || !durationMinutes || !keyAnswers) {
     return res.status(400).json({ error: 'Please fill in all exam details.' });
   }
+
+  const existingExam = id ? await db.getExamById(id) : null;
+  const assignments = existingExam ? (existingExam.assignments || {}) : {};
+
+  const normalizedClasses = Array.isArray(assignedClasses) && assignedClasses.length > 0
+    ? assignedClasses
+    : [assignedClass || 'All'];
+
+  // Initialize active status for newly assigned classes
+  normalizedClasses.forEach(cName => {
+    if (cName !== 'All' && (!assignments[cName] || assignments[cName].status === 'unassigned')) {
+      assignments[cName] = { status: 'active', updatedAt: new Date().toISOString() };
+    }
+  });
+
   const exam = {
+    ...(existingExam || {}),
     id: id || 'e-' + Date.now(),
     title,
     durationMinutes: parseInt(durationMinutes) || 120,
-    assignedClass: assignedClass || 'All',
-    activeParts: activeParts || null, // null = all parts active
+    assignedClass: normalizedClasses.includes('All') ? 'All' : normalizedClasses.join(', '),
+    assignedClasses: normalizedClasses,
+    assignments,
+    activeParts: activeParts || null,
     keyAnswers,
-    createdAt: new Date().toISOString()
+    createdAt: existingExam?.createdAt || new Date().toISOString()
   };
   await db.saveExam(exam);
   res.status(201).json(exam);
 });
 
-app.delete('/api/exams/:id', async (req, res) => {
+app.post('/api/exams/:id/assign', async (req, res) => {
   if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
+  const { className, status, startTime, endTime } = req.body;
+  const exam = await db.getExamById(req.params.id);
+  if (!exam) return res.status(404).json({ error: 'Exam not found.' });
+
+  exam.assignments = exam.assignments || {};
+  exam.assignments[className] = {
+    status: status || 'active',
+    startTime: startTime || null,
+    endTime: endTime || null,
+    updatedAt: new Date().toISOString()
+  };
+
+  const currentAssigned = Array.isArray(exam.assignedClasses) && exam.assignedClasses.length > 0
+    ? exam.assignedClasses
+    : (exam.assignedClass ? exam.assignedClass.split(',').map(s => s.trim()) : ['All']);
+
+  if (!currentAssigned.includes('All') && !currentAssigned.some(c => c.toLowerCase() === className.toLowerCase())) {
+    currentAssigned.push(className);
+    exam.assignedClasses = currentAssigned;
+    exam.assignedClass = currentAssigned.join(', ');
+  }
+
+  await db.saveExam(exam);
+  res.json({ success: true, exam });
+});
+
+app.delete('/api/exams/:id', async (req, res) => {
+  if (getHeaderVal(req, 'x-user-role') !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
   await db.deleteExam(req.params.id);
   res.json({ success: true });
+});
+
+// ---------------- LIVE SESSIONS API (Realtime Student Monitoring) ----------------
+const activeSessionsMap = new Map();
+
+app.post('/api/sessions/ping', (req, res) => {
+  const userId = getHeaderVal(req, 'x-user-id');
+  const username = getHeaderVal(req, 'x-user-username') || 'Student';
+  const className = getHeaderVal(req, 'x-user-classname') || '';
+  const { examId, examTitle, tabSwitches } = req.body;
+
+  if (!examId) return res.status(400).json({ error: 'Missing examId' });
+
+  const sessionKey = `${username}_${examId}`;
+  activeSessionsMap.set(sessionKey, {
+    studentId: userId,
+    studentName: username,
+    className: className,
+    examId: examId,
+    examTitle: examTitle || 'Exam',
+    tabSwitches: tabSwitches || 0,
+    answeredCount: typeof req.body.answeredCount === 'number' ? req.body.answeredCount : 0,
+    totalQuestions: typeof req.body.totalQuestions === 'number' ? req.body.totalQuestions : 82,
+    lastPing: Date.now()
+  });
+
+  res.json({ success: true });
+});
+
+app.get('/api/sessions/active', (req, res) => {
+  const now = Date.now();
+  const activeList = [];
+  for (const [key, session] of activeSessionsMap.entries()) {
+    if (now - session.lastPing < 12000) {
+      activeList.push(session);
+    } else {
+      activeSessionsMap.delete(key);
+    }
+  }
+  res.json(activeList);
 });
 
 // ---------------- SUBMISSIONS API ----------------
 
 app.get('/api/submissions', async (req, res) => {
-  const role = req.headers['x-user-role'];
-  const userId = req.headers['x-user-id'];
+  const role = getHeaderVal(req, 'x-user-role');
+  const userId = getHeaderVal(req, 'x-user-id');
+  const username = getHeaderVal(req, 'x-user-username');
   const submissions = await db.getSubmissions();
   if (role === 'teacher') return res.json(submissions);
-  res.json(submissions.filter(s => s.studentId === userId));
+  res.json(submissions.filter(s => s.studentId === userId || (username && s.studentName === username)));
 });
 
 app.post('/api/submissions', async (req, res) => {
-  const userId = req.headers['x-user-id'];
-  const username = req.headers['x-user-username'] || 'Student';
+  const userId = getHeaderVal(req, 'x-user-id');
+  const username = getHeaderVal(req, 'x-user-username') || 'Student';
   const { examId, answers, tabSwitches } = req.body;
 
   if (!examId || !answers) return res.status(400).json({ error: 'Invalid submission data.' });
+
+  // Clear active session upon submission
+  const sessionKey = `${username}_${examId}`;
+  activeSessionsMap.delete(sessionKey);
 
   const exam = await db.getExamById(examId);
   if (!exam) return res.status(404).json({ error: 'Exam not found.' });

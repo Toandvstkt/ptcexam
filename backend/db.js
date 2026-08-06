@@ -26,7 +26,11 @@ const ExamSchema = new mongoose.Schema({
   title: { type: String, required: true },
   durationMinutes: { type: Number, default: 120 },
   assignedClass: { type: String, default: 'All' },
+  assignedClasses: { type: [String], default: ['All'] },
+  assignments: { type: mongoose.Schema.Types.Mixed, default: {} }, // className -> { status, startTime, endTime }
+  activeParts: { type: mongoose.Schema.Types.Mixed, default: null },
   keyAnswers: { type: mongoose.Schema.Types.Mixed, default: {} },
+  questionSlots: { type: mongoose.Schema.Types.Mixed, default: {} },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -50,10 +54,23 @@ const ClassSchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true }
 });
 
+const LiveProgressSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true }, // `${examId}_${studentId}`
+  examId: { type: String, required: true },
+  studentId: { type: String, required: true },
+  studentName: { type: String, required: true },
+  className: { type: String, default: '' },
+  currentQuestion: { type: String, default: '1' },
+  answeredCount: { type: Number, default: 0 },
+  status: { type: String, enum: ['in_progress', 'submitted'], default: 'in_progress' },
+  lastPing: { type: Date, default: Date.now }
+});
+
 const User = mongoose.model('User', UserSchema);
 const Exam = mongoose.model('Exam', ExamSchema);
 const Submission = mongoose.model('Submission', SubmissionSchema);
 const Class = mongoose.model('Class', ClassSchema);
+const LiveProgress = mongoose.model('LiveProgress', LiveProgressSchema);
 
 // ---------------- CRUD API IMPLEMENTATION ----------------
 
@@ -133,5 +150,24 @@ module.exports = {
 
   async deleteClass(id) {
     await Class.deleteOne({ id });
+  },
+
+  // Live Progress CRUD
+  async updateLiveProgress(data) {
+    const id = `${data.examId}_${data.studentId}`;
+    const updated = await LiveProgress.findOneAndUpdate(
+      { id },
+      { ...data, id, lastPing: new Date() },
+      { upsert: true, new: true }
+    ).lean();
+    return updated;
+  },
+
+  async getLiveProgressForExam(examId, className) {
+    const query = { examId };
+    if (className && className !== 'All') {
+      query.className = className;
+    }
+    return await LiveProgress.find(query).lean();
   }
 };

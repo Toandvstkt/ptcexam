@@ -3,20 +3,33 @@
   --font-body: 'Inter', sans-serif;
 
   /* HSL Color Palette (Professional LMS Light Theme) */
-  --bg-primary: 210 40% 98%;      /* Very soft slate/grey-blue background */
-  --bg-secondary: 220 25% 95%;    /* Sidebar background / accent base */
-  --card-bg: 0 0% 100%;           /* Solid White card background */
-  --border-color: 220 15% 88%;    /* Clean grey border */
-  --text-primary: 220 40% 16%;    /* Deep slate text for headings/important content */
-  --text-secondary: 220 15% 40%;  /* Muted slate text for body and labels */
-  --text-muted: 220 10% 60%;      /* Subtle slate for secondary details */
+  --bg-primary: 210 40% 98%;
+  /* Very soft slate/grey-blue background */
+  --bg-secondary: 220 25% 95%;
+  /* Sidebar background / accent base */
+  --card-bg: 0 0% 100%;
+  /* Solid White card background */
+  --border-color: 220 15% 88%;
+  /* Clean grey border */
+  --text-primary: 220 40% 16%;
+  /* Deep slate text for headings/important content */
+  --text-secondary: 220 15% 40%;
+  /* Muted slate text for body and labels */
+  --text-muted: 220 10% 60%;
+  /* Subtle slate for secondary details */
 
-  --primary: 221 83% 53%;         /* Royal Blue (#2563eb) - Education standard */
-  --primary-hover: 224 76% 48%;   /* Active/Hover blue (#1d4ed8) */
-  --secondary: 215 16% 47%;       /* Slate gray for secondary actions (#64748b) */
-  --success: 142 76% 36%;         /* Calm green for correct answers/positive status (#16a34a) */
-  --danger: 0 72% 51%;            /* Clean red for incorrect answers/danger (#dc2626) */
-  --warning: 38 92% 50%;          /* Warm amber for warnings (#d97706) */
+  --primary: 221 83% 53%;
+  /* Royal Blue (#2563eb) - Education standard */
+  --primary-hover: 224 76% 48%;
+  /* Active/Hover blue (#1d4ed8) */
+  --secondary: 215 16% 47%;
+  /* Slate gray for secondary actions (#64748b) */
+  --success: 142 76% 36%;
+  /* Calm green for correct answers/positive status (#16a34a) */
+  --danger: 0 72% 51%;
+  /* Clean red for incorrect answers/danger (#dc2626) */
+  --warning: 38 92% 50%;
+  /* Warm amber for warnings (#d97706) */
 
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -45,7 +58,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-heading);
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -357,7 +375,8 @@ h1, h2, h3, h4, h5, h6 {
   text-align: left;
 }
 
-.data-table th, .data-table td {
+.data-table th,
+.data-table td {
   padding: 1rem 1.25rem;
 }
 
@@ -508,6 +527,17 @@ h1, h2, h3, h4, h5, h6 {
   border-color: hsl(var(--primary));
 }
 
+/* Tab Navigation Bar (Sticky when scrolling down) */
+.tab-headers {
+  position: sticky !important;
+  top: 60px;
+  z-index: 95;
+  background: hsl(var(--card-bg)) !important;
+  padding: 0.75rem 0.5rem !important;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(8px);
+}
+
 /* Exam Session Layout (Student taking test) */
 .exam-layout {
   display: grid;
@@ -610,8 +640,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .results-score-circle {
-  width: 115px;
-  height: 115px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
   background: hsla(var(--primary) / 0.05);
   border: 3px solid hsl(var(--primary));
@@ -621,24 +651,6 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
   margin: 0;
   text-align: center;
-  transition: transform 0.2s ease;
-}
-
-.results-score-circle.total-main {
-  width: 155px;
-  height: 155px;
-  border-width: 4px;
-  box-shadow: 0 8px 24px hsla(var(--primary) / 0.15);
-  background: hsla(var(--primary) / 0.08);
-}
-
-.results-score-circle.total-main .results-score-num {
-  font-size: 2.6rem;
-}
-
-.results-score-circle.total-main .results-score-label {
-  font-size: 0.85rem;
-  font-weight: 700;
 }
 
 .results-score-circle.reading {
@@ -653,7 +665,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .results-score-num {
   font-family: var(--font-heading);
-  font-size: 1.8rem;
+  font-size: 2.2rem;
   font-weight: 800;
   line-height: 1;
   color: hsl(var(--primary));
@@ -746,18 +758,35 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.95rem;
 }
 
-.text-success { color: hsl(var(--success)); }
-.text-danger { color: hsl(var(--danger)); }
+.text-success {
+  color: hsl(var(--success));
+}
+
+.text-danger {
+  color: hsl(var(--danger));
+}
 
 /* Animations */
 @keyframes pulse {
-  from { opacity: 1; }
-  to { opacity: 0.6; }
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0.6;
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
@@ -771,7 +800,8 @@ h1, h2, h3, h4, h5, h6 {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.4); /* Slate translucent overlay */
+  background: rgba(15, 23, 42, 0.4);
+  /* Slate translucent overlay */
   backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
@@ -823,9 +853,18 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Responsive adjustments for Mobile screens (<= 768px) */
 @media (max-width: 768px) {
+
   /* 0. Main Wrapper & Global Overflows */
-  body, html {
-    overflow-x: hidden;
+  body,
+  html {
+    overflow-x: clip;
+  }
+
+  .tab-headers {
+    top: 0 !important;
+    z-index: 999 !important;
+    padding: 0.5rem 0.25rem !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
   }
 
   .dashboard-grid {
@@ -849,22 +888,27 @@ h1, h2, h3, h4, h5, h6 {
     padding: 0.75rem 0.5rem !important;
     align-items: center;
     text-align: center;
-    position: relative; /* Remove sticky to save screen space on mobile */
+    position: relative;
+    /* Remove sticky to save screen space on mobile */
   }
+
   .logo-section h1 {
     font-size: 1.15rem;
     text-align: center;
   }
+
   .user-info {
     width: 100%;
     justify-content: center;
     gap: 0.5rem;
     flex-wrap: wrap;
   }
+
   .user-role-badge {
     padding: 0.15rem 0.5rem;
     font-size: 0.7rem;
   }
+
   .btn-logout {
     padding: 0.35rem 0.75rem;
     font-size: 0.75rem;
@@ -872,16 +916,19 @@ h1, h2, h3, h4, h5, h6 {
 
   /* 2. Exam Session Header (Sticky bar during exam) */
   .exam-info-header {
-    top: 0 !important; /* Move to top of viewport since main header is no longer sticky */
+    top: 0 !important;
+    /* Move to top of viewport since main header is no longer sticky */
     flex-direction: column;
     gap: 0.75rem;
     padding: 0.75rem 0.5rem !important;
     align-items: center;
     text-align: center;
   }
+
   .exam-info-header h2 {
     font-size: 1.15rem;
   }
+
   .timer-box {
     font-size: 1.05rem;
     padding: 0.3rem 0.9rem;
@@ -893,12 +940,17 @@ h1, h2, h3, h4, h5, h6 {
     padding: 0.5rem !important;
     gap: 1rem;
   }
+
   .exam-layout .main-content {
-    order: 1; /* Question sheet first */
+    order: 1;
+    /* Question sheet first */
   }
+
   .exam-layout aside {
-    order: 2; /* Navigation grid second */
+    order: 2;
+    /* Navigation grid second */
   }
+
   .exam-nav-widget {
     position: relative;
     top: 0;
@@ -911,6 +963,7 @@ h1, h2, h3, h4, h5, h6 {
     gap: 0.35rem !important;
     padding: 0 0.25rem !important;
   }
+
   .tab-headers button {
     font-size: 0.8rem !important;
     padding: 0.35rem 0.5rem !important;
@@ -920,47 +973,42 @@ h1, h2, h3, h4, h5, h6 {
   .results-header-card {
     padding: 1.25rem 0.75rem !important;
   }
+
   .results-header-card h2 {
     font-size: 1.25rem;
   }
-  
-  /* Make result circles side by side with total-main bigger in center */
+
+  /* Make result circles side by side or smaller on small screens */
   .results-score-circle {
-    width: 80px !important;
-    height: 80px !important;
+    width: 90px !important;
+    height: 90px !important;
     margin: 0.15rem !important;
     border-width: 2px !important;
   }
-  .results-score-circle.total-main {
-    width: 110px !important;
-    height: 110px !important;
-    border-width: 3px !important;
-  }
+
   .results-score-num {
-    font-size: 1.15rem !important;
+    font-size: 1.25rem !important;
   }
-  .results-score-circle.total-main .results-score-num {
-    font-size: 1.6rem !important;
-  }
+
   .results-score-label {
     font-size: 0.55rem !important;
     margin-top: 0.05rem;
   }
-  .results-score-circle.total-main .results-score-label {
-    font-size: 0.65rem !important;
-  }
-  
+
   /* 6. Question result card list */
   .results-grid {
     grid-template-columns: 1fr !important;
     gap: 0.5rem !important;
   }
+
   .result-item-card {
     padding: 0.5rem 0.75rem !important;
     gap: 0.5rem !important;
   }
+
   .result-text-info p {
-    white-space: normal !important; /* Wrap long lines so answer detail is readable on mobile */
+    white-space: normal !important;
+    /* Wrap long lines so answer detail is readable on mobile */
     overflow: visible !important;
     text-overflow: clip !important;
     word-break: break-all;
@@ -972,5 +1020,185 @@ h1, h2, h3, h4, h5, h6 {
     right: 1.5rem;
     width: 2.75rem;
     height: 2.75rem;
+  }
+}
+
+/* 4. Tab Headers */
+.tab-headers {
+  justify-content: center;
+  gap: 0.35rem !important;
+  padding: 0 0.25rem !important;
+}
+
+.tab-headers button {
+  font-size: 0.8rem !important;
+  padding: 0.35rem 0.5rem !important;
+}
+
+/* 5. Score Circle Results Page */
+.results-header-card {
+  padding: 1.25rem 0.75rem !important;
+}
+
+.results-header-card h2 {
+  font-size: 1.25rem;
+}
+
+/* Make result circles side by side with total-main bigger in center */
+.results-score-circle {
+  width: 80px !important;
+  height: 80px !important;
+  margin: 0.15rem !important;
+  border-width: 2px !important;
+}
+
+.results-score-circle.total-main {
+  width: 110px !important;
+  height: 110px !important;
+  border-width: 3px !important;
+}
+
+.results-score-num {
+  font-size: 1.15rem !important;
+}
+
+.results-score-circle.total-main .results-score-num {
+  font-size: 1.6rem !important;
+}
+
+.results-score-label {
+  font-size: 0.55rem !important;
+  margin-top: 0.05rem;
+}
+
+.results-score-circle.total-main .results-score-label {
+  font-size: 0.65rem !important;
+}
+
+/* 6. Question result card list */
+.results-grid {
+  grid-template-columns: 1fr !important;
+  gap: 0.5rem !important;
+}
+
+.result-item-card {
+  padding: 0.5rem 0.75rem !important;
+  gap: 0.5rem !important;
+}
+
+.result-text-info p {
+  white-space: normal !important;
+  /* Wrap long lines so answer detail is readable on mobile */
+  overflow: visible !important;
+  text-overflow: clip !important;
+  word-break: break-all;
+}
+
+/* 7. Scroll to Top mobile position */
+.scroll-to-top-btn {
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+/* 8. Extra-Small Mobile Devices (e.g. 375px width iPhone SE / 12 mini) */
+@media (max-width: 480px) {
+  .header {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+  .logo-section h1 {
+    font-size: 1.1rem !important;
+  }
+  .user-info {
+    font-size: 0.8rem !important;
+    gap: 0.35rem !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+  .exam-info-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 0.5rem 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+  .exam-info-header > div:first-child {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+  }
+  .timer-box {
+    align-self: center !important;
+    font-size: 0.95rem !important;
+    padding: 0.25rem 0.75rem !important;
+  }
+  .dashboard-grid {
+    padding: 0.5rem !important;
+  }
+  .glass-card {
+    padding: 0.85rem !important;
+  }
+  .question-row {
+    padding: 0.5rem !important;
+    gap: 0.4rem !important;
+  }
+  .question-num {
+    min-width: 1.6rem !important;
+    height: 1.6rem !important;
+    font-size: 0.8rem !important;
+  }
+  .mcq-option-btn {
+    height: 1.85rem !important;
+    font-size: 0.8rem !important;
+  }
+  .answer-text-input {
+    height: 1.85rem !important;
+    font-size: 0.8rem !important;
+    padding: 0 0.5rem !important;
+  }
+  .nav-questions-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 0.25rem !important;
+  }
+  .nav-question-dot {
+    font-size: 0.75rem !important;
+  }
+  .results-score-circle {
+    width: 75px !important;
+    height: 75px !important;
+  }
+  .results-score-num {
+    font-size: 1.1rem !important;
+  }
+  .results-score-label {
+    font-size: 0.5rem !important;
+  }
+  .data-table th, .data-table td {
+    padding: 0.5rem 0.6rem !important;
+    font-size: 0.8rem !important;
+  }
+  .btn {
+    padding: 0.45rem 0.75rem !important;
+    font-size: 0.82rem !important;
+  }
+  .btn-sm {
+    padding: 0.3rem 0.55rem !important;
+    font-size: 0.75rem !important;
+  }
+  .tab-headers {
+    top: 0 !important;
+    padding: 0.45rem 0.25rem !important;
+    gap: 0.4rem !important;
+    background: hsl(var(--card-bg)) !important;
+    z-index: 999 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    border-bottom: 2px solid hsl(var(--primary)) !important;
+  }
+  .tab-btn {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 0.82rem !important;
   }
 }
