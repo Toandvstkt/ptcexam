@@ -8,17 +8,47 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Helper to normalize answers for grading
+// Part ranges for dynamic question counting
+const PART_RANGES = {
+  reading: [
+    { partNum: 1, range: [1, 8] },
+    { partNum: 2, range: [9, 16] },
+    { partNum: 3, range: [17, 24] },
+    { partNum: 4, range: [25, 30] },
+    { partNum: 5, range: [31, 36] },
+    { partNum: 6, range: [37, 42] },
+    { partNum: 7, range: [43, 52] },
+  ],
+  listening: [
+    { partNum: 1, range: [1, 8] },
+    { partNum: 2, range: [9, 18] },
+    { partNum: 3, range: [19, 23] },
+    { partNum: 4, range: [24, 30] },
+  ]
+};
+
+function getActiveNums(activeParts, tab) {
+  const all = PART_RANGES[tab].map(p => p.partNum);
+  return activeParts?.[tab] ?? all;
+}
+
+function getActiveQuestionKeys(activeParts, prefix, tab) {
+  const activePartNums = getActiveNums(activeParts, tab);
+  const keys = [];
+  for (const p of PART_RANGES[tab]) {
+    if (!activePartNums.includes(p.partNum)) continue;
+    for (let q = p.range[0]; q <= p.range[1]; q++) {
+      keys.push(`${prefix}_${q}`);
+    }
+  }
+  return keys;
+}
+
+// Normalize answers for grading
 function evaluateAnswer(studentAns, keyAns) {
-  if (!studentAns) return false;
-  if (!keyAns) return false;
-  
-  // Normalize: lowercase, trim whitespace, and replace multiple spaces/newlines
+  if (!studentAns || !keyAns) return false;
   const normStudent = studentAns.trim().toLowerCase().replace(/\s+/g, ' ');
-  
-  // Key answers can have multiple alternatives separated by '|'
-  const alternatives = keyAns.split('|').map(ans => ans.trim().toLowerCase().replace(/\s+/g, ' '));
-  
+  const alternatives = keyAns.split('|').map(a => a.trim().toLowerCase().replace(/\s+/g, ' '));
   return alternatives.includes(normStudent);
 }
 
@@ -26,73 +56,59 @@ function evaluateAnswer(studentAns, keyAns) {
 
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ error: "Vui lòng nhập đầy đủ tài khoản và mật khẩu." });
-  }
-
+  if (!username || !password) return res.status(400).json({ error: 'Please enter username and password.' });
   const users = await db.getUsers();
   const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
-
-  if (!user) {
-    return res.status(401).json({ error: "Tài khoản hoặc mật khẩu không chính xác." });
-  }
-
-  res.json({
-    user: {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      className: user.className || ''
-    }
-  });
+  if (!user) return res.status(401).json({ error: 'Incorrect username or password.' });
+  res.json({ user: { id: user.id, username: user.username, role: user.role, className: user.className || '' } });
 });
 
-// ---------------- USERS API (Teacher Only) ----------------
+// ---------------- USERS API ----------------
 
 app.get('/api/users', async (req, res) => {
-  const role = req.headers['x-user-role'];
-  if (role !== 'teacher') {
-    return res.status(403).json({ error: "Không có quyền truy cập." });
-  }
-
+  if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
   const users = await db.getUsers();
   res.json(users.filter(u => u.role === 'student'));
 });
 
 app.post('/api/users', async (req, res) => {
-  const role = req.headers['x-user-role'];
-  if (role !== 'teacher') {
-    return res.status(403).json({ error: "Không có quyền truy cập." });
-  }
-
+  if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
   const { username, password, className } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ error: "Vui lòng điền đầy đủ tên đăng nhập và mật khẩu." });
-  }
-
+  if (!username || !password) return res.status(400).json({ error: 'Username and password are required.' });
   const users = await db.getUsers();
   if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
-    return res.status(400).json({ error: "Tên đăng nhập đã tồn tại." });
+    return res.status(400).json({ error: 'Username already exists.' });
   }
-
-  const newUser = {
-    id: 'u-' + Date.now(),
-    username,
-    password,
-    className: className || '',
-    role: 'student'
-  };
-
+  const newUser = { id: 'u-' + Date.now(), username, password, className: className || '', role: 'student' };
   await db.saveUser(newUser);
   res.status(201).json(newUser);
 });
 
-app.delete('/api/users/:id', async (req, res) => {
-  const role = req.headers['x-user-role'];
-  if (role !== 'teacher') {
-    return res.status(403).json({ error: "Không có quyền truy cập." });
+// Bulk import students from CSV
+app.post('/api/users/bulk', async (req, res) => {
+  if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
+  const { students } = req.body; // [{ username, password, className }]
+  if (!Array.isArray(students) || students.length === 0) {
+    return res.status(400).json({ error: 'No student data provided.' });
   }
+  const existingUsers = await db.getUsers();
+  const results = { created: [], skipped: [], errors: [] };
 
+  for (const s of students) {
+    if (!s.username || !s.password) { results.errors.push(`Row missing username/password`); continue; }
+    if (existingUsers.some(u => u.username.toLowerCase() === s.username.toLowerCase())) {
+      results.skipped.push(s.username); continue;
+    }
+    const newUser = { id: 'u-' + Date.now() + Math.random(), username: s.username, password: s.password, className: s.className || '', role: 'student' };
+    await db.saveUser(newUser);
+    existingUsers.push(newUser);
+    results.created.push(s.username);
+  }
+  res.json(results);
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+  if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
   await db.deleteUser(req.params.id);
   res.json({ success: true });
 });
@@ -100,41 +116,24 @@ app.delete('/api/users/:id', async (req, res) => {
 // ---------------- CLASSES API ----------------
 
 app.get('/api/classes', async (req, res) => {
-  const classes = await db.getClasses();
-  res.json(classes);
+  res.json(await db.getClasses());
 });
 
 app.post('/api/classes', async (req, res) => {
-  const role = req.headers['x-user-role'];
-  if (role !== 'teacher') {
-    return res.status(403).json({ error: "Không có quyền truy cập." });
-  }
-
+  if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
   const { name } = req.body;
-  if (!name) {
-    return res.status(400).json({ error: "Vui lòng nhập tên lớp học." });
-  }
-
+  if (!name) return res.status(400).json({ error: 'Class name is required.' });
   const classes = await db.getClasses();
   if (classes.some(c => c.name.toLowerCase() === name.toLowerCase())) {
-    return res.status(400).json({ error: "Lớp học đã tồn tại." });
+    return res.status(400).json({ error: 'Class already exists.' });
   }
-
-  const newClass = {
-    id: 'c-' + Date.now(),
-    name
-  };
-
+  const newClass = { id: 'c-' + Date.now(), name };
   await db.saveClass(newClass);
   res.status(201).json(newClass);
 });
 
 app.delete('/api/classes/:id', async (req, res) => {
-  const role = req.headers['x-user-role'];
-  if (role !== 'teacher') {
-    return res.status(403).json({ error: "Không có quyền truy cập." });
-  }
-
+  if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
   await db.deleteClass(req.params.id);
   res.json({ success: true });
 });
@@ -145,41 +144,32 @@ app.get('/api/exams', async (req, res) => {
   const exams = await db.getExams();
   const role = req.headers['x-user-role'];
   const userId = req.headers['x-user-id'];
-
   if (role === 'student') {
     const users = await db.getUsers();
-    const studentUser = users.find(u => u.id === userId);
-    const studentClass = studentUser ? (studentUser.className || '') : '';
-
+    const student = users.find(u => u.id === userId);
+    const studentClass = student ? (student.className || '') : '';
     const filtered = exams.filter(ex => {
       const assigned = ex.assignedClass || 'All';
       return assigned === 'All' || assigned === '' || assigned.toLowerCase() === studentClass.toLowerCase();
     });
-
-    const safeExams = filtered.map(({ keyAnswers, ...rest }) => rest);
-    return res.json(safeExams);
+    return res.json(filtered.map(({ keyAnswers, ...rest }) => rest));
   }
   res.json(exams);
 });
 
 app.get('/api/exams/:id', async (req, res) => {
   const exam = await db.getExamById(req.params.id);
-  if (!exam) {
-    return res.status(404).json({ error: "Không tìm thấy đề thi." });
-  }
+  if (!exam) return res.status(404).json({ error: 'Exam not found.' });
   const role = req.headers['x-user-role'];
   const userId = req.headers['x-user-id'];
-
   if (role === 'student') {
     const users = await db.getUsers();
-    const studentUser = users.find(u => u.id === userId);
-    const studentClass = studentUser ? (studentUser.className || '') : '';
+    const student = users.find(u => u.id === userId);
+    const studentClass = student ? (student.className || '') : '';
     const assigned = exam.assignedClass || 'All';
-
     if (assigned !== 'All' && assigned !== '' && assigned.toLowerCase() !== studentClass.toLowerCase()) {
-      return res.status(403).json({ error: "Bạn không có quyền làm đề thi này." });
+      return res.status(403).json({ error: 'You do not have access to this exam.' });
     }
-
     const { keyAnswers, ...rest } = exam;
     return res.json(rest);
   }
@@ -187,35 +177,26 @@ app.get('/api/exams/:id', async (req, res) => {
 });
 
 app.post('/api/exams', async (req, res) => {
-  const role = req.headers['x-user-role'];
-  if (role !== 'teacher') {
-    return res.status(403).json({ error: "Không có quyền truy cập." });
-  }
-
-  const { id, title, durationMinutes, keyAnswers, assignedClass } = req.body;
+  if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
+  const { id, title, durationMinutes, keyAnswers, assignedClass, activeParts } = req.body;
   if (!title || !durationMinutes || !keyAnswers) {
-    return res.status(400).json({ error: "Vui lòng nhập đầy đủ thông tin đề thi." });
+    return res.status(400).json({ error: 'Please fill in all exam details.' });
   }
-
   const exam = {
     id: id || 'e-' + Date.now(),
     title,
     durationMinutes: parseInt(durationMinutes) || 120,
     assignedClass: assignedClass || 'All',
-    keyAnswers, // { r_1..r_52, l_1..l_30 }
+    activeParts: activeParts || null, // null = all parts active
+    keyAnswers,
     createdAt: new Date().toISOString()
   };
-
   await db.saveExam(exam);
   res.status(201).json(exam);
 });
 
 app.delete('/api/exams/:id', async (req, res) => {
-  const role = req.headers['x-user-role'];
-  if (role !== 'teacher') {
-    return res.status(403).json({ error: "Không có quyền truy cập." });
-  }
-
+  if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
   await db.deleteExam(req.params.id);
   res.json({ success: true });
 });
@@ -225,74 +206,48 @@ app.delete('/api/exams/:id', async (req, res) => {
 app.get('/api/submissions', async (req, res) => {
   const role = req.headers['x-user-role'];
   const userId = req.headers['x-user-id'];
-  
   const submissions = await db.getSubmissions();
-  
-  if (role === 'teacher') {
-    res.json(submissions);
-  } else {
-    // Students only see their own submissions
-    res.json(submissions.filter(s => s.studentId === userId));
-  }
+  if (role === 'teacher') return res.json(submissions);
+  res.json(submissions.filter(s => s.studentId === userId));
 });
 
 app.post('/api/submissions', async (req, res) => {
   const userId = req.headers['x-user-id'];
-  const username = req.headers['x-user-username'] || 'Học viên';
-  const { examId, answers } = req.body; // answers is { [qKey]: "student answer" }
+  const username = req.headers['x-user-username'] || 'Student';
+  const { examId, answers, tabSwitches } = req.body;
 
-  if (!examId || !answers) {
-    return res.status(400).json({ error: "Dữ liệu nộp bài không hợp lệ." });
-  }
+  if (!examId || !answers) return res.status(400).json({ error: 'Invalid submission data.' });
 
   const exam = await db.getExamById(examId);
-  if (!exam) {
-    return res.status(404).json({ error: "Đề thi không tồn tại." });
-  }
+  if (!exam) return res.status(404).json({ error: 'Exam not found.' });
 
   const keyAnswers = exam.keyAnswers || {};
-  let score = 0;
-  let readingScore = 0;
-  let listeningScore = 0;
+  const activeParts = exam.activeParts || null;
+
+  // Get active question keys
+  const readingKeys = getActiveQuestionKeys(activeParts, 'r', 'reading');
+  const listeningKeys = getActiveQuestionKeys(activeParts, 'l', 'listening');
+
+  let score = 0, readingScore = 0, listeningScore = 0;
   const details = {};
 
-  // Grade Reading section (r_1 to r_52)
-  for (let qNum = 1; qNum <= 52; qNum++) {
-    const qKey = `r_${qNum}`;
-    const studentAnswer = (answers[qKey] || "").trim();
-    const correctAnswer = keyAnswers[qKey] || "";
+  for (const qKey of readingKeys) {
+    const studentAnswer = (answers[qKey] || '').trim();
+    const correctAnswer = keyAnswers[qKey] || '';
     const isCorrect = correctAnswer ? evaluateAnswer(studentAnswer, correctAnswer) : false;
-
-    if (isCorrect) {
-      score++;
-      readingScore++;
-    }
-
-    details[qKey] = {
-      studentAnswer,
-      correctAnswer,
-      isCorrect
-    };
+    if (isCorrect) { score++; readingScore++; }
+    details[qKey] = { studentAnswer, correctAnswer, isCorrect };
   }
 
-  // Grade Listening section (l_1 to l_30)
-  for (let qNum = 1; qNum <= 30; qNum++) {
-    const qKey = `l_${qNum}`;
-    const studentAnswer = (answers[qKey] || "").trim();
-    const correctAnswer = keyAnswers[qKey] || "";
+  for (const qKey of listeningKeys) {
+    const studentAnswer = (answers[qKey] || '').trim();
+    const correctAnswer = keyAnswers[qKey] || '';
     const isCorrect = correctAnswer ? evaluateAnswer(studentAnswer, correctAnswer) : false;
-
-    if (isCorrect) {
-      score++;
-      listeningScore++;
-    }
-
-    details[qKey] = {
-      studentAnswer,
-      correctAnswer,
-      isCorrect
-    };
+    if (isCorrect) { score++; listeningScore++; }
+    details[qKey] = { studentAnswer, correctAnswer, isCorrect };
   }
+
+  const totalQuestions = readingKeys.length + listeningKeys.length;
 
   const submission = {
     id: 's-' + Date.now(),
@@ -303,7 +258,8 @@ app.post('/api/submissions', async (req, res) => {
     score,
     readingScore,
     listeningScore,
-    totalQuestions: 82,
+    totalQuestions,
+    tabSwitches: tabSwitches || 0,
     answers,
     details,
     submittedAt: new Date().toISOString()

@@ -17,9 +17,11 @@ import {
   RefreshCw,
   Search,
   Eye,
-  ArrowUp
+  ArrowUp,
+  Upload,
+  FileText
 } from 'lucide-react';
-import { TEMPLATES, getQuestionArray } from './utils/templates';
+import { TEMPLATES, getQuestionArray, getActiveParts } from './utils/templates';
 
 const API_BASE = window.location.port === '5173'
   ? 'http://localhost:5000/api'
@@ -59,13 +61,18 @@ export default function App() {
   const [students, setStudents] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [classes, setClasses] = useState([]);
-  const [editingExam, setEditingExam] = useState(null); // null or { id, title, durationMinutes, type, keyAnswers }
+  const [editingExam, setEditingExam] = useState(null);
   const [newStudentName, setNewStudentName] = useState('');
   const [newStudentPass, setNewStudentPass] = useState('');
   const [newStudentClass, setNewStudentClass] = useState('');
   const [newClassName, setNewClassName] = useState('');
   const [selectedClassForDetails, setSelectedClassForDetails] = useState(null);
   const [backView, setBackView] = useState(null);
+
+  // Bulk CSV Import
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [bulkCsvText, setBulkCsvText] = useState('');
+  const [bulkResult, setBulkResult] = useState(null);
 
   // Scoreboard Filters & Views
   const [scoreFilterClass, setScoreFilterClass] = useState('All');
@@ -75,57 +82,44 @@ export default function App() {
 
   // Student States
   const [activeExam, setActiveExam] = useState(null);
-  const [studentAnswers, setStudentAnswers] = useState({}); // { qNum: answer }
-  const [timeLeft, setTimeLeft] = useState(0); // in seconds
-  const [reportSubmission, setReportSubmission] = useState(null); // current review data
+  const [studentAnswers, setStudentAnswers] = useState({});
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [reportSubmission, setReportSubmission] = useState(null);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const timerRef = useRef(null);
-  
-  // Navigation tabs for full exam
-  const [activeTab, setActiveTab] = useState('reading'); // 'reading' | 'listening'
+  const [activeTab, setActiveTab] = useState('reading');
 
-  const renderTabHeaders = () => (
-    <div className="tab-headers animate-fade-in" style={{ display: 'flex', gap: '1rem', borderBottom: '2px solid hsla(var(--border-color) / 0.2)', marginBottom: '1.5rem', paddingBottom: '0.25rem' }}>
-      <button
-        type="button"
-        className={`tab-btn ${activeTab === 'reading' ? 'active' : ''}`}
-        onClick={() => setActiveTab('reading')}
-        style={{
-          background: 'none',
-          border: 'none',
-          color: activeTab === 'reading' ? 'hsl(var(--primary))' : 'hsl(var(--text-secondary))',
-          borderBottom: activeTab === 'reading' ? '3px solid hsl(var(--primary))' : '3px solid transparent',
-          padding: '0.5rem 1rem',
-          fontWeight: '600',
-          cursor: 'pointer',
-          fontSize: '1rem',
-          marginBottom: '-6px',
-          transition: 'all 0.2s ease'
-        }}
-      >
-        Reading & Use of English (52 câu)
-      </button>
-      <button
-        type="button"
-        className={`tab-btn ${activeTab === 'listening' ? 'active' : ''}`}
-        onClick={() => setActiveTab('listening')}
-        style={{
-          background: 'none',
-          border: 'none',
-          color: activeTab === 'listening' ? 'hsl(var(--primary))' : 'hsl(var(--text-secondary))',
-          borderBottom: activeTab === 'listening' ? '3px solid hsl(var(--primary))' : '3px solid transparent',
-          padding: '0.5rem 1rem',
-          fontWeight: '600',
-          cursor: 'pointer',
-          fontSize: '1rem',
-          marginBottom: '-6px',
-          transition: 'all 0.2s ease'
-        }}
-      >
-        Listening (30 câu)
-      </button>
-    </div>
-  );
+  // Tab-switch anti-cheat tracking
+  const tabSwitchRef = useRef(0);
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [showTabWarning, setShowTabWarning] = useState(false);
+
+  const renderTabHeaders = (exam) => {
+    const readingCount = exam
+      ? getActiveParts(exam, 'reading').reduce((s, pn) => {
+          const p = TEMPLATES.reading.parts.find(x => x.partNum === pn);
+          return p ? s + (p.questionRange[1] - p.questionRange[0] + 1) : s;
+        }, 0)
+      : 52;
+    const listeningCount = exam
+      ? getActiveParts(exam, 'listening').reduce((s, pn) => {
+          const p = TEMPLATES.listening.parts.find(x => x.partNum === pn);
+          return p ? s + (p.questionRange[1] - p.questionRange[0] + 1) : s;
+        }, 0)
+      : 30;
+    return (
+      <div className="tab-headers animate-fade-in" style={{ display: 'flex', gap: '1rem', borderBottom: '2px solid hsla(var(--border-color) / 0.2)', marginBottom: '1.5rem', paddingBottom: '0.25rem' }}>
+        <button type="button" className={`tab-btn ${activeTab === 'reading' ? 'active' : ''}`} onClick={() => setActiveTab('reading')}
+          style={{ background: 'none', border: 'none', color: activeTab === 'reading' ? 'hsl(var(--primary))' : 'hsl(var(--text-secondary))', borderBottom: activeTab === 'reading' ? '3px solid hsl(var(--primary))' : '3px solid transparent', padding: '0.5rem 1rem', fontWeight: '600', cursor: 'pointer', fontSize: '1rem', marginBottom: '-6px', transition: 'all 0.2s ease' }}>
+          Reading & Use of English ({readingCount} questions)
+        </button>
+        <button type="button" className={`tab-btn ${activeTab === 'listening' ? 'active' : ''}`} onClick={() => setActiveTab('listening')}
+          style={{ background: 'none', border: 'none', color: activeTab === 'listening' ? 'hsl(var(--primary))' : 'hsl(var(--text-secondary))', borderBottom: activeTab === 'listening' ? '3px solid hsl(var(--primary))' : '3px solid transparent', padding: '0.5rem 1rem', fontWeight: '600', cursor: 'pointer', fontSize: '1rem', marginBottom: '-6px', transition: 'all 0.2s ease' }}>
+          Listening ({listeningCount} questions)
+        </button>
+      </div>
+    );
+  };
 
   // Sync view on startup
   useEffect(() => {
@@ -141,6 +135,22 @@ export default function App() {
       setCurrentView('login');
     }
   }, [user]);
+
+  // Tab-switch tracking during exam
+  useEffect(() => {
+    if (currentView !== 'student_session') return;
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        tabSwitchRef.current += 1;
+        setTabSwitchCount(tabSwitchRef.current);
+      } else {
+        setShowTabWarning(true);
+        setTimeout(() => setShowTabWarning(false), 4000);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [currentView]);
 
   // Timer Tick effect
   useEffect(() => {
@@ -350,14 +360,14 @@ export default function App() {
   // Student Actions
   const handleStartExam = (exam) => {
     setActiveExam(exam);
-    // Initialize answers structure for both Reading and Listening
+    // Reset tab-switch tracker
+    tabSwitchRef.current = 0;
+    setTabSwitchCount(0);
+    setShowTabWarning(false);
+    // Initialize answers
     const initial = {};
-    for (let i = 1; i <= 52; i++) {
-      initial[`r_${i}`] = '';
-    }
-    for (let i = 1; i <= 30; i++) {
-      initial[`l_${i}`] = '';
-    }
+    for (let i = 1; i <= 52; i++) initial[`r_${i}`] = '';
+    for (let i = 1; i <= 30; i++) initial[`l_${i}`] = '';
     setStudentAnswers(initial);
     setTimeLeft(exam.durationMinutes * 60);
     setActiveTab('reading');
@@ -382,25 +392,45 @@ export default function App() {
         headers: getHeaders(),
         body: JSON.stringify({
           examId: activeExam.id,
-          answers: studentAnswers
+          answers: studentAnswers,
+          tabSwitches: tabSwitchRef.current
         })
       });
       const data = await res.json();
       if (!res.ok) {
-        alert("Có lỗi khi nộp bài: " + (data.error || "Lỗi không xác định"));
+        alert('Submission error: ' + (data.error || 'Unknown error'));
         return;
       }
       setReportSubmission(data);
       setCurrentView('student_result');
-      if (isAuto) {
-        alert("Hết thời gian làm bài! Hệ thống đã tự động nộp bài của bạn.");
-      } else {
-        alert("Nộp bài thành công!");
-      }
+      if (isAuto) alert('Time is up! Your answers have been submitted automatically.');
+      else alert('Submitted successfully!');
       fetchStudentData();
-    } catch (err) {
-      alert("Lỗi kết nối khi nộp bài!");
+    } catch {
+      alert('Connection error while submitting!');
     }
+  };
+
+  // Bulk CSV import handler
+  const handleBulkImport = async () => {
+    setBulkResult(null);
+    const lines = bulkCsvText.trim().split('\n').filter(l => l.trim());
+    const students = lines.map(line => {
+      const parts = line.split(',').map(p => p.trim());
+      return { username: parts[0] || '', password: parts[1] || '', className: parts[2] || '' };
+    }).filter(s => s.username && s.password);
+    if (students.length === 0) { setBulkResult({ error: 'No valid rows found. Format: username,password,class' }); return; }
+    try {
+      const res = await fetch(`${API_BASE}/users/bulk`, {
+        method: 'POST', headers: getHeaders(),
+        body: JSON.stringify({ students })
+      });
+      const data = await res.json();
+      if (!res.ok) { setBulkResult({ error: data.error }); return; }
+      setBulkResult(data);
+      setBulkCsvText('');
+      fetchTeacherData();
+    } catch { setBulkResult({ error: 'Connection error.' }); }
   };
 
   // Formatting seconds to MM:SS
@@ -509,7 +539,9 @@ export default function App() {
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button className="btn btn-primary btn-sm" onClick={() => {
-                      setEditingExam({ title: '', durationMinutes: 120, assignedClass: 'All', keyAnswers: {} });
+                      const allReadingParts = TEMPLATES.reading.parts.map(p => p.partNum);
+                      const allListeningParts = TEMPLATES.listening.parts.map(p => p.partNum);
+                      setEditingExam({ title: '', durationMinutes: 120, assignedClass: 'All', keyAnswers: {}, activeParts: { reading: allReadingParts, listening: allListeningParts } });
                       setActiveTab('reading');
                     }}>
                       <Plus size={16} />
@@ -614,15 +646,37 @@ export default function App() {
                   * Đối với các câu điền từ tự do, bạn có thể nhập nhiều đáp án đúng cách nhau bằng dấu gạch đứng " | " (ví dụ: `known | well-known`). Hệ thống tự động bỏ qua viết hoa/viết thường và khoảng trắng dư thừa.
                 </p>
 
-                {renderTabHeaders()}
+                {renderTabHeaders(editingExam)}
+
+                {/* Part toggle checkboxes */}
+                <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'hsla(var(--primary) / 0.05)', borderRadius: 'var(--radius-sm)', border: '1px solid hsla(var(--primary) / 0.15)' }}>
+                  <p style={{ fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.75rem', color: 'hsl(var(--text-secondary))' }}>Active Parts — uncheck to remove a part from this exam:</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {TEMPLATES[activeTab].parts.map(part => {
+                      const active = editingExam.activeParts?.[activeTab] ?? TEMPLATES[activeTab].parts.map(p => p.partNum);
+                      const isActive = active.includes(part.partNum);
+                      return (
+                        <label key={part.partNum} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', padding: '0.3rem 0.7rem', borderRadius: 'var(--radius-sm)', background: isActive ? 'hsla(var(--primary) / 0.12)' : 'hsla(var(--border-color) / 0.15)', border: `1px solid ${isActive ? 'hsla(var(--primary) / 0.3)' : 'hsla(var(--border-color) / 0.3)'}`, fontSize: '0.82rem', fontWeight: '600', color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--text-muted))' }}>
+                          <input type="checkbox" checked={isActive} onChange={() => {
+                            const current = editingExam.activeParts?.[activeTab] ?? TEMPLATES[activeTab].parts.map(p => p.partNum);
+                            const updated = isActive ? current.filter(n => n !== part.partNum) : [...current, part.partNum].sort((a, b) => a - b);
+                            setEditingExam({ ...editingExam, activeParts: { ...(editingExam.activeParts || { reading: TEMPLATES.reading.parts.map(p => p.partNum), listening: TEMPLATES.listening.parts.map(p => p.partNum) }), [activeTab]: updated } });
+                          }} style={{ accentColor: 'hsl(var(--primary))' }} />
+                          Part {part.partNum}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 {TEMPLATES[activeTab].parts.map(part => {
+                  const activePNs = editingExam.activeParts?.[activeTab] ?? TEMPLATES[activeTab].parts.map(p => p.partNum);
+                  if (!activePNs.includes(part.partNum)) return null;
                   const qArray = getQuestionArray(part.questionRange);
                   return (
                     <div key={part.partNum} className="exam-part-section animate-fade-in">
                       <h3>{part.title}</h3>
                       <p>{part.description}</p>
-                      
                       <div className="questions-grid">
                         {qArray.map(qNum => {
                           const qKey = `${activeTab === 'reading' ? 'r' : 'l'}_${qNum}`;
@@ -633,30 +687,20 @@ export default function App() {
                               {part.type === 'mcq' ? (
                                 <div className="answer-mcq-options">
                                   {part.options.map(opt => (
-                                    <button
-                                      key={opt}
-                                      type="button"
-                                      className={`mcq-option-btn ${currentVal === opt ? 'selected' : ''}`}
-                                      onClick={() => {
-                                        const newKeys = { ...editingExam.keyAnswers, [qKey]: opt };
-                                        setEditingExam({ ...editingExam, keyAnswers: newKeys });
-                                      }}
-                                    >
+                                    <button key={opt} type="button" className={`mcq-option-btn ${currentVal === opt ? 'selected' : ''}`}
+                                      onClick={() => setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [qKey]: opt } })}>
                                       {opt}
                                     </button>
                                   ))}
                                 </div>
                               ) : (
-                                <input
-                                  className="answer-text-input"
-                                  type="text"
-                                  placeholder={part.placeholder}
+                                <input className="answer-text-input" type="text" placeholder={part.placeholder}
+                                  style={part.uppercase ? { textTransform: 'uppercase' } : {}}
                                   value={currentVal}
                                   onChange={e => {
-                                    const newKeys = { ...editingExam.keyAnswers, [qKey]: e.target.value };
-                                    setEditingExam({ ...editingExam, keyAnswers: newKeys });
-                                  }}
-                                />
+                                    const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
+                                    setEditingExam({ ...editingExam, keyAnswers: { ...editingExam.keyAnswers, [qKey]: val } });
+                                  }} />
                               )}
                             </div>
                           );
@@ -824,76 +868,79 @@ export default function App() {
               </div>
             )}
 
-            {/* View 2: Student Accounts */}
             {currentView === 'teacher_students' && (
               <div className="glass-card animate-fade-in">
-                <h2>Quản Lý Tài Khoản Học Viên</h2>
-                <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem' }}>Tạo tài khoản đăng nhập để học viên vào làm bài và nộp đáp án.</p>
+                <h2>Student Accounts</h2>
+                <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem' }}>Create login accounts for students to access and submit exams.</p>
                 
-                <form onSubmit={handleAddStudent} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '2rem', flexWrap: 'wrap' }}>
+                <form onSubmit={handleAddStudent} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1rem', flexWrap: 'wrap' }}>
                   <div className="form-group" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }}>
-                    <label className="form-label">Tên đăng nhập</label>
-                    <input className="form-input" type="text" placeholder="Ví dụ: student_an" value={newStudentName} onChange={e => setNewStudentName(e.target.value)} required />
+                    <label className="form-label">Username</label>
+                    <input className="form-input" type="text" placeholder="e.g. student_an" value={newStudentName} onChange={e => setNewStudentName(e.target.value)} required />
                   </div>
                   <div className="form-group" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }}>
-                    <label className="form-label">Mật khẩu</label>
-                    <input className="form-input" type="text" placeholder="Nhập mật khẩu..." value={newStudentPass} onChange={e => setNewStudentPass(e.target.value)} required />
+                    <label className="form-label">Password</label>
+                    <input className="form-input" type="text" placeholder="Enter password..." value={newStudentPass} onChange={e => setNewStudentPass(e.target.value)} required />
                   </div>
                   <div className="form-group" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }}>
-                    <label className="form-label">Lớp học</label>
-                    <select 
-                      className="form-input" 
-                      value={newStudentClass} 
-                      onChange={e => setNewStudentClass(e.target.value)} 
-                      required
-                      style={{ height: '2.7rem', padding: '0.5rem', background: 'hsla(var(--background-card-raw) / 0.6)', color: 'hsl(var(--text-primary))' }}
-                    >
-                      <option value="">-- Chọn lớp --</option>
-                      {classes.map(c => (
-                        <option key={c.id} value={c.name}>{c.name}</option>
-                      ))}
+                    <label className="form-label">Class</label>
+                    <select className="form-input" value={newStudentClass} onChange={e => setNewStudentClass(e.target.value)} required style={{ height: '2.7rem', padding: '0.5rem', background: 'hsla(var(--background-card-raw) / 0.6)', color: 'hsl(var(--text-primary))' }}>
+                      <option value="">-- Select class --</option>
+                      {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                     </select>
                   </div>
                   <button className="btn btn-primary" type="submit" style={{ height: '2.7rem' }}>
-                    <Plus size={16} />
-                    Tạo Tài Khoản
+                    <Plus size={16} /> Add Student
                   </button>
                 </form>
+
+                {/* Bulk CSV Import */}
+                <div style={{ marginBottom: '2rem' }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => { setShowBulkImport(!showBulkImport); setBulkResult(null); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Upload size={14} /> {showBulkImport ? 'Hide' : 'Bulk Import (CSV)'}
+                  </button>
+                  {showBulkImport && (
+                    <div style={{ marginTop: '1rem', padding: '1rem', background: 'hsla(var(--primary) / 0.05)', borderRadius: 'var(--radius-sm)', border: '1px solid hsla(var(--primary) / 0.15)' }}>
+                      <p style={{ fontSize: '0.85rem', color: 'hsl(var(--text-secondary))', marginBottom: '0.5rem' }}>
+                        One student per line: <code style={{ background: 'hsla(var(--border-color)/0.3)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>username,password,classname</code>
+                      </p>
+                      <textarea
+                        rows={6} placeholder={"student1,pass123,12A1\nstudent2,pass456,12A2"}
+                        value={bulkCsvText} onChange={e => setBulkCsvText(e.target.value)}
+                        style={{ width: '100%', fontFamily: 'monospace', fontSize: '0.85rem', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid hsl(var(--border-color))', background: 'hsl(var(--card-bg))', color: 'hsl(var(--text-primary))', resize: 'vertical', boxSizing: 'border-box' }}
+                      />
+                      <button className="btn btn-primary btn-sm" style={{ marginTop: '0.5rem' }} onClick={handleBulkImport}>
+                        <FileText size={14} /> Import Students
+                      </button>
+                      {bulkResult && (
+                        <div style={{ marginTop: '0.75rem', fontSize: '0.85rem' }}>
+                          {bulkResult.error && <p style={{ color: 'hsl(var(--danger))' }}>❌ {bulkResult.error}</p>}
+                          {bulkResult.created && <p style={{ color: 'hsl(var(--success))' }}>✅ Created: {bulkResult.created.length} ({bulkResult.created.join(', ')})</p>}
+                          {bulkResult.skipped?.length > 0 && <p style={{ color: 'hsl(var(--warning))' }}>⚠️ Skipped (already exist): {bulkResult.skipped.join(', ')}</p>}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {errorMsg && <div style={{ color: 'hsl(var(--danger))', marginBottom: '1rem' }}>{errorMsg}</div>}
 
                 <div className="table-container">
                   <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Tên Đăng Nhập</th>
-                        <th>Mật Khẩu</th>
-                        <th>Lớp học</th>
-                        <th>Vai Trò</th>
-                        <th style={{ width: '80px' }}>Xóa</th>
-                      </tr>
-                    </thead>
+                    <thead><tr>
+                      <th>Username</th><th>Password</th><th>Class</th><th>Role</th><th style={{ width: '80px' }}>Delete</th>
+                    </tr></thead>
                     <tbody>
                       {students.length === 0 ? (
-                        <tr>
-                          <td colSpan="5" style={{ textAlign: 'center', color: 'hsl(var(--text-muted))' }}>Chưa có tài khoản học viên nào.</td>
-                        </tr>
+                        <tr><td colSpan="5" style={{ textAlign: 'center', color: 'hsl(var(--text-muted))' }}>No student accounts yet.</td></tr>
                       ) : (
                         students.map(st => (
                           <tr key={st.id}>
                             <td><strong>{st.username}</strong></td>
                             <td style={{ fontFamily: 'monospace' }}>{st.password}</td>
-                            <td>
-                              <span className="user-role-badge" style={{ background: 'hsla(var(--primary) / 0.08)', color: 'hsl(var(--primary))' }}>
-                                {st.className || 'Chưa phân lớp'}
-                              </span>
-                            </td>
-                            <td>Học viên</td>
-                            <td>
-                              <button className="btn btn-danger btn-sm" onClick={() => handleDeleteStudent(st.id)}>
-                                <Trash2 size={14} />
-                              </button>
-                            </td>
+                            <td><span className="user-role-badge" style={{ background: 'hsla(var(--primary) / 0.08)', color: 'hsl(var(--primary))' }}>{st.className || 'Unassigned'}</span></td>
+                            <td>Student</td>
+                            <td><button className="btn btn-danger btn-sm" onClick={() => handleDeleteStudent(st.id)}><Trash2 size={14} /></button></td>
                           </tr>
                         ))
                       )}
@@ -1230,16 +1277,27 @@ export default function App() {
 
           {renderTabHeaders()}
 
+          {/* Tab-switch warning banner */}
+          {showTabWarning && (
+            <div style={{ position: 'fixed', top: '5rem', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: 'hsl(var(--danger))', color: '#fff', padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-md)', boxShadow: '0 4px 24px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600', fontSize: '0.95rem', animation: 'fadeIn 0.3s ease' }}>
+              <AlertTriangle size={18} />
+              ⚠️ Tab switch detected! ({tabSwitchCount} time{tabSwitchCount > 1 ? 's' : ''}) — this is being recorded.
+            </div>
+          )}
+
           <div className="exam-layout">
-            {/* Left Hand side: Form inputs grouped by Parts */}
             <div className="main-content">
-              {TEMPLATES[activeTab].parts.map(part => {
+              {TEMPLATES[activeTab].parts
+                .filter(part => {
+                  const active = getActiveParts(activeExam, activeTab);
+                  return active.includes(part.partNum);
+                })
+                .map(part => {
                 const qArray = getQuestionArray(part.questionRange);
                 return (
                   <div key={part.partNum} className="glass-card" id={`part-section-${part.partNum}`}>
                     <h3 style={{ fontSize: '1.2rem', marginBottom: '0.25rem' }}>{part.title}</h3>
                     <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.85rem', marginBottom: '1.25rem' }}>{part.description}</p>
-                    
                     <div className="questions-grid">
                       {qArray.map(qNum => {
                         const qKey = `${activeTab === 'reading' ? 'r' : 'l'}_${qNum}`;
@@ -1252,30 +1310,20 @@ export default function App() {
                             {part.type === 'mcq' ? (
                               <div className="answer-mcq-options">
                                 {part.options.map(opt => (
-                                  <button
-                                    key={opt}
-                                    type="button"
-                                    className={`mcq-option-btn ${currentAnswer === opt ? 'selected' : ''}`}
-                                    onClick={() => {
-                                      const updated = { ...studentAnswers, [qKey]: opt };
-                                      setStudentAnswers(updated);
-                                    }}
-                                  >
+                                  <button key={opt} type="button" className={`mcq-option-btn ${currentAnswer === opt ? 'selected' : ''}`}
+                                    onClick={() => setStudentAnswers({ ...studentAnswers, [qKey]: opt })}>
                                     {opt}
                                   </button>
                                 ))}
                               </div>
                             ) : (
-                              <input
-                                className="answer-text-input"
-                                type="text"
-                                placeholder={part.placeholder}
+                              <input className="answer-text-input" type="text" placeholder={part.placeholder}
+                                style={part.uppercase ? { textTransform: 'uppercase' } : {}}
                                 value={currentAnswer}
                                 onChange={e => {
-                                  const updated = { ...studentAnswers, [qKey]: e.target.value };
-                                  setStudentAnswers(updated);
-                                }}
-                              />
+                                  const val = part.uppercase ? e.target.value.toUpperCase() : e.target.value;
+                                  setStudentAnswers({ ...studentAnswers, [qKey]: val });
+                                }} />
                             )}
                           </div>
                         );
@@ -1294,7 +1342,9 @@ export default function App() {
                   Theo dõi các câu hỏi đã điền. Bạn có thể nhấn vào nút số để cuộn nhanh đến câu đó.
                 </p>
 
-                {TEMPLATES[activeTab].parts.map(part => {
+              {TEMPLATES[activeTab].parts
+                .filter(p => getActiveParts(activeExam, activeTab).includes(p.partNum))
+                .map(part => {
                   const qArray = getQuestionArray(part.questionRange);
                   return (
                     <div key={part.partNum} style={{ marginTop: '1rem' }}>
@@ -1304,15 +1354,8 @@ export default function App() {
                           const qKey = `${activeTab === 'reading' ? 'r' : 'l'}_${qNum}`;
                           const isAnswered = studentAnswers[qKey] !== '';
                           return (
-                            <a
-                              key={qNum}
-                              href={`#q-field-${qKey}`}
-                              className={`nav-question-dot ${isAnswered ? 'answered' : ''}`}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                document.getElementById(`q-field-${qKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              }}
-                            >
+                            <a key={qNum} href={`#q-field-${qKey}`} className={`nav-question-dot ${isAnswered ? 'answered' : ''}`}
+                              onClick={(e) => { e.preventDefault(); document.getElementById(`q-field-${qKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}>
                               {qNum}
                             </a>
                           );
@@ -1373,8 +1416,13 @@ export default function App() {
             </div>
 
             <p style={{ fontSize: '1.1rem', fontWeight: '600', color: 'hsl(var(--text-primary))' }}>
-              Tỷ lệ chính xác chung: {Math.round((reportSubmission.score / 82) * 100)}%
+              Accuracy: {Math.round((reportSubmission.score / reportSubmission.totalQuestions) * 100)}%
             </p>
+            {reportSubmission.tabSwitches > 0 && (
+              <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'hsl(var(--danger))', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <AlertTriangle size={16} /> Tab switches detected: {reportSubmission.tabSwitches}
+              </p>
+            )}
 
             <button className="btn btn-secondary" style={{ marginTop: '1.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => {
               if (user.role === 'teacher') {
@@ -1398,7 +1446,7 @@ export default function App() {
               Chi Tiết Bài Làm Từng Câu
             </h3>
 
-            {renderTabHeaders()}
+            {renderTabHeaders(null)}
 
             {TEMPLATES[activeTab].parts.map(part => {
               const qArray = getQuestionArray(part.questionRange);
