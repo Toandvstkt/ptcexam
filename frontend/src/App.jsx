@@ -190,18 +190,84 @@ export default function App() {
     );
   };
 
+  // Navigation with History API (Prevents Back button from exiting app)
+  const changeView = (nextView, replace = false) => {
+    if (nextView === currentView) return;
+    try {
+      if (replace) {
+        window.history.replaceState({ view: nextView }, '', window.location.pathname + window.location.search);
+      } else {
+        window.history.pushState({ view: nextView }, '', window.location.pathname + window.location.search);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setCurrentView(nextView);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Handle Browser & Mobile Phone Back Button (PopState)
+  useEffect(() => {
+    if (!window.history.state || !window.history.state.view) {
+      window.history.replaceState({ view: currentView }, '', window.location.pathname + window.location.search);
+    }
+
+    const handlePopState = (event) => {
+      // 1. Intercept Back button during active exam session
+      if (currentView === 'student_session') {
+        window.history.pushState({ view: 'student_session' }, '', window.location.pathname + window.location.search);
+        const confirmExit = window.confirm(
+          "⚠️ CẢNH BÁO: Bạn đang trong bài thi!\nNếu rời khỏi, bài thi của bạn sẽ chưa được nộp hoàn tất. Bạn có chắc chắn muốn rời khỏi bài thi không?"
+        );
+        if (confirmExit) {
+          changeView('student_exams', true);
+        }
+        return;
+      }
+
+      // 2. In-app navigation back
+      const targetView = event.state?.view;
+      if (targetView) {
+        setCurrentView(targetView);
+      } else {
+        if (user?.role === 'teacher') {
+          setCurrentView('teacher_exams');
+        } else if (user?.role === 'student') {
+          setCurrentView('student_exams');
+        } else {
+          setCurrentView('login');
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [currentView, user]);
+
+  // Protect against accidental tab close / refresh during exam session
+  useEffect(() => {
+    if (currentView !== 'student_session') return;
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = 'Bạn đang trong bài thi. Nếu rời khỏi trang, dữ liệu làm bài có thể bị mất!';
+      return e.returnValue;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [currentView]);
+
   // Sync view on startup
   useEffect(() => {
     if (user) {
       if (user.role === 'teacher') {
-        setCurrentView('teacher_exams');
+        changeView('teacher_exams', true);
         fetchTeacherData();
       } else {
-        setCurrentView('student_exams');
+        changeView('student_exams', true);
         fetchStudentData();
       }
     } else {
-      setCurrentView('login');
+      changeView('login', true);
     }
   }, [user]);
 
@@ -425,7 +491,7 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem('exam_user');
     setUser(null);
-    setCurrentView('login');
+    changeView('login', true);
     setActiveExam(null);
     setStudentAnswers({});
     setReportSubmission(null);
@@ -596,7 +662,7 @@ export default function App() {
     setStudentAnswers(initial);
     setTimeLeft(exam.durationMinutes * 60);
     setActiveTab('reading');
-    setCurrentView('student_session');
+    changeView('student_session');
   };
 
   const handleAutoSubmit = async (reason = 'Time is up! Your answers have been submitted automatically.') => {
@@ -632,7 +698,7 @@ export default function App() {
         return;
       }
       setReportSubmission(data);
-      setCurrentView('student_result');
+      changeView('student_result', true);
       if (isAuto) alert(autoReason);
       else alert('Submitted successfully!');
       fetchStudentData();
@@ -739,19 +805,19 @@ export default function App() {
           {/* Sidebar */}
           <aside className="sidebar-nav">
             <div className="glass-cardNav" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <div className={`sidebar-link ${currentView === 'teacher_exams' ? 'active' : ''}`} onClick={() => { setCurrentView('teacher_exams'); setEditingExam(null); }}>
+              <div className={`sidebar-link ${currentView === 'teacher_exams' ? 'active' : ''}`} onClick={() => { changeView('teacher_exams'); setEditingExam(null); }}>
                 <ClipboardList size={18} />
                 <span>Manage Exams</span>
               </div>
-              <div className={`sidebar-link ${currentView === 'teacher_classes' || currentView === 'class_details' ? 'active' : ''}`} onClick={() => { setCurrentView('teacher_classes'); setEditingExam(null); }}>
+              <div className={`sidebar-link ${currentView === 'teacher_classes' || currentView === 'class_details' ? 'active' : ''}`} onClick={() => { changeView('teacher_classes'); setEditingExam(null); }}>
                 <BookOpen size={18} />
                 <span>Manage Classes</span>
               </div>
-              <div className={`sidebar-link ${currentView === 'teacher_students' ? 'active' : ''}`} onClick={() => { setCurrentView('teacher_students'); setEditingExam(null); }}>
+              <div className={`sidebar-link ${currentView === 'teacher_students' ? 'active' : ''}`} onClick={() => { changeView('teacher_students'); setEditingExam(null); }}>
                 <Users size={18} />
                 <span>Student Accounts</span>
               </div>
-              <div className={`sidebar-link ${currentView === 'teacher_scores' ? 'active' : ''}`} onClick={() => { setCurrentView('teacher_scores'); setEditingExam(null); }}>
+              <div className={`sidebar-link ${currentView === 'teacher_scores' ? 'active' : ''}`} onClick={() => { changeView('teacher_scores'); setEditingExam(null); }}>
                 <Award size={18} />
                 <span>Score Reports</span>
               </div>
@@ -1495,7 +1561,7 @@ export default function App() {
             {currentView === 'class_details' && !selectedClassForDetails && (
               <div className="glass-card animate-fade-in" style={{ textAlign: 'center', padding: '3rem' }}>
                 <p style={{ color: 'hsl(var(--text-muted))', marginBottom: '1rem' }}>No class selected.</p>
-                <button className="btn btn-primary btn-sm" onClick={() => setCurrentView('teacher_classes')}>
+                <button className="btn btn-primary btn-sm" onClick={() => changeView('teacher_classes')}>
                   <ArrowLeft size={14} style={{ marginRight: '0.25rem' }} /> Back to Manage Classes
                 </button>
               </div>
@@ -2163,12 +2229,12 @@ export default function App() {
             <button className="btn btn-secondary" style={{ marginTop: '1.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => {
               if (user.role === 'teacher') {
                 const targetView = backView || 'teacher_scores';
-                setCurrentView(targetView);
+                changeView(targetView);
                 if (targetView !== 'class_details') {
                   setSelectedClassForDetails(null);
                 }
               } else {
-                setCurrentView('student_exams');
+                changeView('student_exams');
               }
               setReportSubmission(null);
               setBackView(null);
