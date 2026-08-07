@@ -151,9 +151,26 @@ export default function App() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
-      setBulkCsvText(evt.target.result || '');
+      let content = evt.target.result || '';
+      if (content.charCodeAt(0) === 0xFEFF) {
+        content = content.slice(1);
+      }
+      // If corrupted replacement characters occur due to ANSI encoding from Excel, fallback to windows-1258
+      if (content.includes('\uFFFD')) {
+        const fallbackReader = new FileReader();
+        fallbackReader.onload = (evt2) => {
+          let content2 = evt2.target.result || '';
+          if (content2.charCodeAt(0) === 0xFEFF) {
+            content2 = content2.slice(1);
+          }
+          setBulkCsvText(content2);
+        };
+        fallbackReader.readAsText(file, 'windows-1258');
+        return;
+      }
+      setBulkCsvText(content);
     };
-    reader.readAsText(file);
+    reader.readAsText(file, 'UTF-8');
   };
 
   // Scoreboard Filters & Views
