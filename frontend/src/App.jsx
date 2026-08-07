@@ -106,7 +106,8 @@ export default function App() {
       if (i === 0 && (line.toLowerCase().includes('username') || line.toLowerCase().includes('mật khẩu') || line.toLowerCase().includes('tên') || line.toLowerCase().includes('password') || line.toLowerCase().includes('name'))) {
         continue;
       }
-      const parts = line.split(/[,;\t]+/).map(p => p.trim());
+      const cleanPart = (p) => (p || '').trim().replace(/^["']|["']$/g, '').trim();
+      const parts = line.split(/[,;\t]+/).map(cleanPart);
       if (parts.length >= 4) {
         parsedStudents.push({ fullName: parts[0], username: parts[1], password: parts[2], className: parts[3] });
       } else if (parts.length === 3) {
