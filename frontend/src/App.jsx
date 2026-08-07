@@ -190,14 +190,29 @@ export default function App() {
     );
   };
 
-  // Navigation with History API (Prevents Back & Forward buttons from exiting app)
+const VIEW_PATHS = {
+  login: '/login',
+  teacher_exams: '/teacher/exams',
+  teacher_classes: '/teacher/classes',
+  class_details: '/teacher/class-details',
+  teacher_students: '/teacher/students',
+  teacher_scores: '/teacher/scores',
+  student_exams: '/student/exams',
+  student_session: '/student/exam-session',
+  student_result: '/student/exam-result'
+};
+
+const getPathForView = (view) => VIEW_PATHS[view] || '/';
+
+  // Navigation with History API & Distinct URL Paths (Prevents Back & Forward buttons from exiting app)
   const changeView = (nextView, replace = false) => {
     if (nextView === currentView) return;
+    const targetPath = getPathForView(nextView);
     try {
       if (replace) {
-        window.history.replaceState({ view: nextView }, '', window.location.pathname + window.location.search);
+        window.history.replaceState({ view: nextView }, '', targetPath);
       } else {
-        window.history.pushState({ view: nextView }, '', window.location.pathname + window.location.search);
+        window.history.pushState({ view: nextView }, '', targetPath);
       }
     } catch (e) {
       console.error(e);
@@ -209,8 +224,9 @@ export default function App() {
   // Push base history state on user login / app startup
   useEffect(() => {
     const rootHome = user ? (user.role === 'teacher' ? 'teacher_exams' : 'student_exams') : 'login';
+    const targetPath = getPathForView(rootHome);
     if (!window.history.state || !window.history.state.view) {
-      window.history.pushState({ view: rootHome }, '', window.location.pathname + window.location.search);
+      window.history.replaceState({ view: rootHome }, '', targetPath);
     }
   }, [user]);
 
@@ -219,7 +235,7 @@ export default function App() {
     const handlePopState = (event) => {
       // 1. Intercept Back button during active exam session
       if (currentView === 'student_session') {
-        window.history.pushState({ view: 'student_session' }, '', window.location.pathname + window.location.search);
+        window.history.pushState({ view: 'student_session' }, '', getPathForView('student_session'));
         const confirmExit = window.confirm(
           "⚠️ CẢNH BÁO: Bạn đang trong bài thi!\nNếu rời khỏi, bài thi của bạn sẽ chưa được nộp hoàn tất. Bạn có chắc chắn muốn rời khỏi bài thi không?"
         );
@@ -237,7 +253,7 @@ export default function App() {
       if (targetView === 'student_session' && currentView === 'student_result') {
         const rootHome = user?.role === 'teacher' ? 'teacher_exams' : 'student_exams';
         setCurrentView(rootHome);
-        window.history.replaceState({ view: rootHome }, '', window.location.pathname + window.location.search);
+        window.history.replaceState({ view: rootHome }, '', getPathForView(rootHome));
         return;
       }
 
@@ -246,7 +262,7 @@ export default function App() {
       } else {
         // 3. Trap: If user hits back past initial app entry, push root view back so browser NEVER exits app!
         const rootHome = user ? (user.role === 'teacher' ? 'teacher_exams' : 'student_exams') : 'login';
-        window.history.pushState({ view: rootHome }, '', window.location.pathname + window.location.search);
+        window.history.pushState({ view: rootHome }, '', getPathForView(rootHome));
         setCurrentView(rootHome);
       }
     };
