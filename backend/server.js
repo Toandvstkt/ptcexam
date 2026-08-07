@@ -203,8 +203,12 @@ app.get('/api/exams', async (req, res) => {
     const users = await db.getUsers();
     const student = users.find(u => u.id === userId || (usernameHeader && u.username.toLowerCase() === usernameHeader.toLowerCase()));
     const studentClass = (student && student.className) ? student.className : classHeader;
+    const submissions = await db.getSubmissions();
 
     const filtered = exams.filter(ex => {
+      const hasSubmitted = submissions.some(s => s.examId === ex.id && (s.studentId === userId || (student && s.studentName.toLowerCase() === student.username.toLowerCase())));
+      if (hasSubmitted) return true;
+
       const assignedList = Array.isArray(ex.assignedClasses) && ex.assignedClasses.length > 0
         ? ex.assignedClasses
         : (ex.assignedClass ? ex.assignedClass.split(',').map(s => s.trim()) : ['All']);
@@ -245,23 +249,27 @@ app.get('/api/exams/:id', async (req, res) => {
     const users = await db.getUsers();
     const student = users.find(u => u.id === userId || (usernameHeader && u.username.toLowerCase() === usernameHeader.toLowerCase()));
     const studentClass = (student && student.className) ? student.className : classHeader;
+    const submissions = await db.getSubmissions();
+    const hasSubmitted = submissions.some(s => s.examId === exam.id && (s.studentId === userId || (student && s.studentName.toLowerCase() === student.username.toLowerCase())));
 
-    const assignedList = Array.isArray(exam.assignedClasses) && exam.assignedClasses.length > 0
-      ? exam.assignedClasses
-      : (exam.assignedClass ? exam.assignedClass.split(',').map(s => s.trim()) : ['All']);
-    const isAssigned = assignedList.includes('All') || assignedList.some(c => c.toLowerCase() === studentClass.toLowerCase());
+    if (!hasSubmitted) {
+      const assignedList = Array.isArray(exam.assignedClasses) && exam.assignedClasses.length > 0
+        ? exam.assignedClasses
+        : (exam.assignedClass ? exam.assignedClass.split(',').map(s => s.trim()) : ['All']);
+      const isAssigned = assignedList.includes('All') || assignedList.some(c => c.toLowerCase() === studentClass.toLowerCase());
 
-    const assignments = exam.assignments || {};
-    let assignInfo = null;
-    for (const key of Object.keys(assignments)) {
-      if (key.toLowerCase() === studentClass.toLowerCase()) {
-        assignInfo = assignments[key];
-        break;
+      const assignments = exam.assignments || {};
+      let assignInfo = null;
+      for (const key of Object.keys(assignments)) {
+        if (key.toLowerCase() === studentClass.toLowerCase()) {
+          assignInfo = assignments[key];
+          break;
+        }
       }
-    }
 
-    if (!isAssigned || (assignInfo && (assignInfo.status === 'unassigned' || assignInfo.status === 'ended'))) {
-      return res.status(403).json({ error: 'You do not have access to this exam.' });
+      if (!isAssigned || (assignInfo && (assignInfo.status === 'unassigned' || assignInfo.status === 'ended'))) {
+        return res.status(403).json({ error: 'You do not have access to this exam.' });
+      }
     }
     const { keyAnswers, ...rest } = exam;
     return res.json(rest);

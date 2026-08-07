@@ -1809,8 +1809,8 @@ export default function App() {
           <div className="glass-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
               <div>
-                <h2 style={{ marginBottom: '0.25rem' }}>Active Exams</h2>
-                <p style={{ color: 'hsl(var(--text-secondary))' }}>Select an exam to begin entering your answers.</p>
+                <h2 style={{ marginBottom: '0.25rem' }}>Student Portal</h2>
+                <p style={{ color: 'hsl(var(--text-secondary))' }}>Access active exams and review your completed exam history.</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.9rem' }}>Your class:</span>
@@ -1820,60 +1820,110 @@ export default function App() {
               </div>
             </div>
 
-            <div className="exams-list-grid">
-              {exams.length === 0 ? (
-                <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'hsl(var(--text-muted))', padding: '3rem 0' }}>
-                  No active exams currently available. Please check back later.
-                </div>
-              ) : (
-                exams.map(ex => {
-                  const previousSub = submissions.find(s => s.examId === ex.id);
+            {/* Section 1: Active / Available Exams */}
+            <div style={{ marginBottom: '3rem' }}>
+              <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ClipboardList size={20} color="hsl(var(--primary))" />
+                Active Exams to Take
+              </h3>
+              {(() => {
+                const availableExams = exams.filter(ex => !submissions.some(s => s.examId === ex.id));
+                if (availableExams.length === 0) {
                   return (
-                    <div key={ex.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                      <span className="user-role-badge" style={{ alignSelf: 'flex-start', background: 'hsla(var(--primary) / 0.08)', color: 'hsl(var(--primary))', marginBottom: '1rem' }}>
-                        Full Exam (Reading & Listening)
-                      </span>
-                      <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{ex.title}</h3>
+                    <div style={{ padding: '2rem', textAlign: 'center', color: 'hsl(var(--text-muted))', background: 'hsl(var(--bg-primary))', borderRadius: 'var(--radius-md)', border: '1px dashed hsl(var(--border-color))' }}>
+                      No new active exams available to take at this time.
+                    </div>
+                  );
+                }
+                return (
+                  <div className="exams-list-grid">
+                    {availableExams.map(ex => (
+                      <div key={ex.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <span className="user-role-badge" style={{ alignSelf: 'flex-start', background: 'hsla(var(--primary) / 0.08)', color: 'hsl(var(--primary))', marginBottom: '1rem' }}>
+                          Full Exam (Reading & Listening)
+                        </span>
+                        <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{ex.title}</h3>
 
-                      <div style={{ display: 'flex', gap: '1.25rem', color: 'hsl(var(--text-secondary))', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Clock size={16} />
-                          <span>{ex.durationMinutes} minutes</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <ClipboardList size={16} />
-                          <span>82 questions</span>
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: 'auto' }}>
-                        {previousSub ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'hsl(var(--success))', fontWeight: '600' }}>
-                              <CheckCircle size={16} />
-                              <span>Total Score: {previousSub.score} / 82</span>
-                            </div>
-                            <div style={{ fontSize: '0.8rem', color: 'hsl(var(--text-secondary))' }}>
-                              Reading: {previousSub.readingScore || 0}/52 | Listening: {previousSub.listeningScore || 0}/30
-                            </div>
-                            <button className="btn btn-secondary btn-sm" style={{ width: '100%', marginTop: '0.5rem' }} onClick={() => {
-                              setReportSubmission(previousSub);
-                              setCurrentView('student_result');
-                              setActiveTab('reading');
-                            }}>
-                              Review Submission
-                            </button>
+                        <div style={{ display: 'flex', gap: '1.25rem', color: 'hsl(var(--text-secondary))', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <Clock size={16} />
+                            <span>{ex.durationMinutes} minutes</span>
                           </div>
-                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <ClipboardList size={16} />
+                            <span>82 questions</span>
+                          </div>
+                        </div>
+
+                        <div style={{ marginTop: 'auto' }}>
                           <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => handleStartExam(ex)}>
                             Start Exam
                             <ChevronRight size={16} />
                           </button>
-                        )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Section 2: Completed Exam History */}
+            <div>
+              <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CheckCircle size={20} color="hsl(var(--success))" />
+                Completed Exam History ({submissions.length})
+              </h3>
+              {submissions.length === 0 ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'hsl(var(--text-muted))', background: 'hsl(var(--bg-primary))', borderRadius: 'var(--radius-md)', border: '1px dashed hsl(var(--border-color))' }}>
+                  You have not completed any exams yet.
+                </div>
+              ) : (
+                <div className="exams-list-grid">
+                  {submissions.map(sub => {
+                    const matchedExam = exams.find(e => e.id === sub.examId);
+                    const totalQ = sub.totalQuestions || 82;
+                    const scale10 = ((sub.score / totalQ) * 10).toFixed(1);
+                    return (
+                      <div key={sub.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', height: '100%', borderLeft: '4px solid hsl(var(--success))' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                          <span className="user-role-badge" style={{ background: 'hsla(var(--success) / 0.1)', color: 'hsl(var(--success))' }}>
+                            Submitted
+                          </span>
+                          <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-secondary))' }}>
+                            {new Date(sub.submittedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        <h3 style={{ fontSize: '1.2rem', marginBottom: '0.75rem' }}>{sub.examTitle}</h3>
+
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                          <span style={{ fontSize: '1.8rem', fontWeight: '800', color: 'hsl(var(--primary))' }}>
+                            {scale10}
+                          </span>
+                          <span style={{ fontSize: '0.9rem', color: 'hsl(var(--text-secondary))', fontWeight: '600' }}>
+                            / 10 ({sub.score}/{totalQ} correct)
+                          </span>
+                        </div>
+
+                        <div style={{ fontSize: '0.825rem', color: 'hsl(var(--text-secondary))', marginBottom: '1.25rem' }}>
+                          R: {sub.readingScore || 0}/{sub.readingTotal || 52} | L: {sub.listeningScore || 0}/{sub.listeningTotal || 30}
+                        </div>
+
+                        <div style={{ marginTop: 'auto' }}>
+                          <button className="btn btn-secondary btn-sm" style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }} onClick={() => {
+                            if (matchedExam) setActiveExam(matchedExam);
+                            setReportSubmission(sub);
+                            setCurrentView('student_result');
+                            setActiveTab('reading');
+                          }}>
+                            <Eye size={14} /> Review Answers
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
@@ -2052,21 +2102,32 @@ export default function App() {
             <h2>Exam Submission Results</h2>
             <p style={{ color: 'hsl(var(--text-secondary))' }}>Exam: {reportSubmission.examTitle}</p>
 
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', margin: '1.5rem 0', flexWrap: 'wrap' }}>
-              <div className="results-score-circle" style={{ borderColor: 'hsl(var(--primary))' }}>
-                <span className="results-score-num" style={{ color: 'hsl(var(--primary))' }}>
-                  {((reportSubmission.score / (reportSubmission.totalQuestions || 1)) * 10).toFixed(1)}
-                </span>
-                <span className="results-score-label">/ 10 Scale</span>
-              </div>
-              <div className="results-score-circle">
-                <span className="results-score-num">{reportSubmission.score}</span>
-                <span className="results-score-label">/ {reportSubmission.totalQuestions || 82} Raw</span>
-              </div>
+            <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', alignItems: 'center', margin: '1.5rem 0', flexWrap: 'wrap' }}>
+              {/* Left Circle: Reading */}
               <div className="results-score-circle reading">
                 <span className="results-score-num">{reportSubmission.readingScore || 0}</span>
                 <span className="results-score-label">/ {reportSubmission.readingTotal || 52} Reading</span>
               </div>
+
+              {/* Center Circle: Main Score out of 10 (Larger) */}
+              <div className="results-score-circle" style={{
+                width: '110px',
+                height: '110px',
+                borderWidth: '3.5px',
+                borderColor: 'hsl(var(--primary))',
+                background: 'hsla(var(--primary) / 0.06)',
+                transform: 'scale(1.15)',
+                boxShadow: '0 8px 24px hsla(var(--primary) / 0.2)'
+              }}>
+                <span className="results-score-num" style={{ color: 'hsl(var(--primary))', fontSize: '1.8rem', fontWeight: '800' }}>
+                  {((reportSubmission.score / (reportSubmission.totalQuestions || 1)) * 10).toFixed(1)}
+                </span>
+                <span className="results-score-label" style={{ fontWeight: '700', color: 'hsl(var(--primary))' }}>
+                  / 10 Score
+                </span>
+              </div>
+
+              {/* Right Circle: Listening */}
               <div className="results-score-circle listening">
                 <span className="results-score-num">{reportSubmission.listeningScore || 0}</span>
                 <span className="results-score-label">/ {reportSubmission.listeningTotal || 30} Listening</span>
