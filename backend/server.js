@@ -68,6 +68,51 @@ function evaluateAnswer(studentAns, keyAns) {
   return alternatives.includes(normStudent);
 }
 
+function gradeExamTab(exam, prefix, tab, answers, details) {
+  const activePartNums = getActiveNums(exam?.activeParts, tab);
+  const keyAnswers = exam?.keyAnswers || {};
+  const questionSlots = exam?.questionSlots || {};
+
+  let correctCount = 0;
+  let totalQuestionCount = 0;
+
+  for (const p of PART_RANGES[tab]) {
+    if (!activePartNums.includes(p.partNum)) continue;
+    for (let q = p.range[0]; q <= p.range[1]; q++) {
+      totalQuestionCount++;
+      const baseKey = `${prefix}_${q}`;
+
+      const numSlots = questionSlots[baseKey] || (tab === 'reading' && p.partNum === 4 ? 2 : 1);
+      const slotKeys = [baseKey];
+      for (let s = 2; s <= numSlots; s++) {
+        slotKeys.push(`${baseKey}_s${s}`);
+      }
+      Object.keys(keyAnswers).forEach(k => {
+        if (k.startsWith(`${baseKey}_s`) && !slotKeys.includes(k)) {
+          slotKeys.push(k);
+        }
+      });
+
+      let isQuestionAllCorrect = true;
+      for (const sKey of slotKeys) {
+        const studentAns = (answers[sKey] || '').trim();
+        const keyAns = keyAnswers[sKey] || '';
+        const isSlotCorrect = keyAns ? evaluateAnswer(studentAns, keyAns) : false;
+        details[sKey] = { studentAnswer: studentAns, correctAnswer: keyAns, isCorrect: isSlotCorrect };
+        if (!isSlotCorrect) {
+          isQuestionAllCorrect = false;
+        }
+      }
+
+      if (isQuestionAllCorrect) {
+        correctCount++;
+      }
+    }
+  }
+
+  return { correctCount, totalQuestionCount };
+}
+
 // ---------------- AUTH API ----------------
 
 app.post('/api/auth/login', async (req, res) => {
@@ -415,33 +460,19 @@ app.post('/api/submissions', async (req, res) => {
 
   const keyAnswers = exam.keyAnswers || {};
   const activeParts = exam.activeParts || null;
-
-  // Get active question keys
-  const readingKeys = getActiveQuestionKeys(exam, 'r', 'reading');
-  const listeningKeys = getActiveQuestionKeys(exam, 'l', 'listening');
-
-  let score = 0, readingScore = 0, listeningScore = 0;
   const details = {};
 
-  for (const qKey of readingKeys) {
-    const studentAnswer = (answers[qKey] || '').trim();
-    const correctAnswer = keyAnswers[qKey] || '';
-    const isCorrect = correctAnswer ? evaluateAnswer(studentAnswer, correctAnswer) : false;
-    if (isCorrect) { score++; readingScore++; }
-    details[qKey] = { studentAnswer, correctAnswer, isCorrect };
-  }
+  const readingResult = gradeExamTab(exam, 'r', 'reading', answers, details);
+  const listeningResult = gradeExamTab(exam, 'l', 'listening', answers, details);
 
-  for (const qKey of listeningKeys) {
-    const studentAnswer = (answers[qKey] || '').trim();
-    const correctAnswer = keyAnswers[qKey] || '';
-    const isCorrect = correctAnswer ? evaluateAnswer(studentAnswer, correctAnswer) : false;
-    if (isCorrect) { score++; listeningScore++; }
-    details[qKey] = { studentAnswer, correctAnswer, isCorrect };
-  }
+  const readingScore = readingResult.correctCount;
+  const readingTotal = readingResult.totalQuestionCount;
+  const listeningScore = listeningResult.correctCount;
+  const listeningTotal = listeningResult.totalQuestionCount;
 
-  const readingTotal = readingKeys.length;
-  const listeningTotal = listeningKeys.length;
+  const score = readingScore + listeningScore;
   const totalQuestions = readingTotal + listeningTotal;
+  const score100 = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
   const submission = {
     id: 's-' + Date.now(),
@@ -450,6 +481,7 @@ app.post('/api/submissions', async (req, res) => {
     studentId: userId,
     studentName: username,
     score,
+    score100,
     readingScore,
     listeningScore,
     readingTotal,

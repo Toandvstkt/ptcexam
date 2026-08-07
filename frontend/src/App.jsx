@@ -1681,7 +1681,7 @@ export default function App() {
                                 <td>{new Date(sub.submittedAt).toLocaleDateString()}</td>
                                 <td>
                                   <div style={{ fontWeight: '600', color: pct >= 50 ? 'hsl(var(--success))' : 'hsl(var(--danger))' }}>
-                                    {((sub.score / (sub.totalQuestions || 1)) * 10).toFixed(1)} / 10 <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>({sub.score}/{sub.totalQuestions})</span>
+                                    {sub.score100 ?? Math.round((sub.score / (sub.totalQuestions || 1)) * 100)} / 100 <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>({sub.score}/{sub.totalQuestions})</span>
                                   </div>
                                   <div style={{ fontSize: '0.75rem', color: 'hsl(var(--text-secondary))', marginTop: '0.15rem' }}>
                                     R: {sub.readingScore || 0}/{sub.readingTotal || 52} | L: {sub.listeningScore || 0}/{sub.listeningTotal || 30}
@@ -1883,7 +1883,7 @@ export default function App() {
                   {submissions.map(sub => {
                     const matchedExam = exams.find(e => e.id === sub.examId);
                     const totalQ = sub.totalQuestions || 82;
-                    const scale10 = ((sub.score / totalQ) * 10).toFixed(1);
+                    const score100 = sub.score100 ?? Math.round((sub.score / totalQ) * 100);
                     return (
                       <div key={sub.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', height: '100%', borderLeft: '4px solid hsl(var(--success))' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
@@ -1899,10 +1899,10 @@ export default function App() {
 
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.5rem' }}>
                           <span style={{ fontSize: '1.8rem', fontWeight: '800', color: 'hsl(var(--primary))' }}>
-                            {scale10}
+                            {score100}
                           </span>
                           <span style={{ fontSize: '0.9rem', color: 'hsl(var(--text-secondary))', fontWeight: '600' }}>
-                            / 10 ({sub.score}/{totalQ} correct)
+                            / 100 ({sub.score}/{totalQ} questions)
                           </span>
                         </div>
 
@@ -2109,7 +2109,7 @@ export default function App() {
                 <span className="results-score-label">/ {reportSubmission.readingTotal || 52} Reading</span>
               </div>
 
-              {/* Center Circle: Main Score out of 10 (Larger) */}
+              {/* Center Circle: Main Score out of 100 (Larger) */}
               <div className="results-score-circle" style={{
                 width: '110px',
                 height: '110px',
@@ -2120,10 +2120,10 @@ export default function App() {
                 boxShadow: '0 8px 24px hsla(var(--primary) / 0.2)'
               }}>
                 <span className="results-score-num" style={{ color: 'hsl(var(--primary))', fontSize: '1.8rem', fontWeight: '800' }}>
-                  {((reportSubmission.score / (reportSubmission.totalQuestions || 1)) * 10).toFixed(1)}
+                  {reportSubmission.score100 ?? Math.round((reportSubmission.score / (reportSubmission.totalQuestions || 1)) * 100)}
                 </span>
                 <span className="results-score-label" style={{ fontWeight: '700', color: 'hsl(var(--primary))' }}>
-                  / 10 Score
+                  / 100 Score
                 </span>
               </div>
 
