@@ -63,6 +63,7 @@ export default function App() {
   const [students, setStudents] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [selectedClassForDetails, setSelectedClassForDetails] = useState(null);
   const [editingExam, setEditingExam] = useState(null);
   const [newStudentFullName, setNewStudentFullName] = useState('');
   const [newStudentName, setNewStudentName] = useState('');
