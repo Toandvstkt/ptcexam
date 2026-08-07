@@ -204,6 +204,28 @@ app.post('/api/users/bulk', async (req, res) => {
   res.json({ success: true, createdCount: results.created.length, updatedCount: results.updated.length, results });
 });
 
+app.put('/api/users/:id', async (req, res) => {
+  if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
+  const { fullName, username, password, className } = req.body;
+  const users = await db.getUsers();
+  const user = users.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found.' });
+
+  if (username && username.toLowerCase() !== user.username.toLowerCase()) {
+    if (users.some(u => u.id !== user.id && u.username.toLowerCase() === username.toLowerCase())) {
+      return res.status(400).json({ error: 'Username already exists.' });
+    }
+    user.username = username.trim();
+  }
+
+  if (fullName !== undefined) user.fullName = fullName.trim();
+  if (password !== undefined) user.password = password.trim();
+  if (className !== undefined) user.className = className.trim();
+
+  await db.saveUser(user);
+  res.json(user);
+});
+
 app.delete('/api/users/:id', async (req, res) => {
   if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
   await db.deleteUser(req.params.id);

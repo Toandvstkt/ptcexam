@@ -20,7 +20,8 @@ import {
   ArrowUp,
   ArrowLeft,
   Upload,
-  FileText
+  FileText,
+  Edit
 } from 'lucide-react';
 import { TEMPLATES, getQuestionArray, getActiveParts } from './utils/templates';
 
@@ -68,8 +69,38 @@ export default function App() {
   const [newStudentPass, setNewStudentPass] = useState('');
   const [newStudentClass, setNewStudentClass] = useState('');
   const [newClassName, setNewClassName] = useState('');
-  const [selectedClassForDetails, setSelectedClassForDetails] = useState(null);
-  const [backView, setBackView] = useState(null);
+  const [editingStudent, setEditingStudent] = useState(null);
+  const [editStudentFullName, setEditStudentFullName] = useState('');
+  const [editStudentUsername, setEditStudentUsername] = useState('');
+  const [editStudentPassword, setEditStudentPassword] = useState('');
+  const [editStudentClassName, setEditStudentClassName] = useState('');
+
+  const handleSaveEditStudent = async (e) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+    try {
+      const res = await fetch(`${API_BASE}/users/${editingStudent.id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify({
+          fullName: editStudentFullName,
+          username: editStudentUsername,
+          password: editStudentPassword,
+          className: editStudentClassName
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Cập nhật tài khoản thất bại.');
+        return;
+      }
+      setEditingStudent(null);
+      fetchTeacherData();
+      alert('Cập nhật tài khoản học sinh thành công!');
+    } catch (err) {
+      alert('Lỗi kết nối máy chủ.');
+    }
+  };
 
   // Bulk CSV Import
   const [showBulkImport, setShowBulkImport] = useState(false);
@@ -1657,7 +1688,7 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
                 <div className="table-container">
                   <table className="data-table">
                     <thead><tr>
-                      <th>Họ và Tên</th><th>Tên đăng nhập (Username)</th><th>Mật khẩu</th><th>Lớp</th><th>Vai trò</th><th style={{ width: '80px' }}>Xóa</th>
+                      <th>Họ và Tên</th><th>Tên đăng nhập (Username)</th><th>Mật khẩu</th><th>Lớp</th><th>Vai trò</th><th style={{ width: '100px' }}>Hành động</th>
                     </tr></thead>
                     <tbody>
                       {students.length === 0 ? (
@@ -1670,13 +1701,97 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
                             <td style={{ fontFamily: 'monospace' }}>{st.password}</td>
                             <td><span className="user-role-badge" style={{ background: 'hsla(var(--primary) / 0.08)', color: 'hsl(var(--primary))' }}>{st.className || 'Chưa xếp lớp'}</span></td>
                             <td>Học sinh</td>
-                            <td><button className="btn btn-danger btn-sm" onClick={() => handleDeleteStudent(st.id)}><Trash2 size={14} /></button></td>
+                            <td style={{ display: 'flex', gap: '0.4rem' }}>
+                              <button className="btn btn-secondary btn-sm" title="Sửa thông tin" onClick={() => {
+                                setEditingStudent(st);
+                                setEditStudentFullName(st.fullName || st.username);
+                                setEditStudentUsername(st.username);
+                                setEditStudentPassword(st.password);
+                                setEditStudentClassName(st.className || '');
+                              }}>
+                                <Edit size={14} />
+                              </button>
+                              <button className="btn btn-danger btn-sm" title="Xóa" onClick={() => handleDeleteStudent(st.id)}>
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
                           </tr>
                         ))
                       )}
                     </tbody>
                   </table>
                 </div>
+
+                {/* EDIT STUDENT MODAL */}
+                {editingStudent && (
+                  <div className="modal-overlay">
+                    <div className="glass-card modal-content animate-fade-in" style={{ maxWidth: '480px', width: '92%' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                        <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'hsl(var(--text-primary))' }}>
+                          <Edit size={20} style={{ color: 'hsl(var(--primary))' }} />
+                          Chỉnh sửa tài khoản Học sinh
+                        </h3>
+                        <button className="btn btn-secondary btn-sm" onClick={() => setEditingStudent(null)}>✕</button>
+                      </div>
+
+                      <form onSubmit={handleSaveEditStudent}>
+                        <div className="form-group" style={{ marginBottom: '1rem' }}>
+                          <label className="form-label">Họ và Tên</label>
+                          <input
+                            className="form-input"
+                            type="text"
+                            placeholder="Ví dụ: Nguyễn Văn An"
+                            value={editStudentFullName}
+                            onChange={e => setEditStudentFullName(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: '1rem' }}>
+                          <label className="form-label">Tên đăng nhập (Username)</label>
+                          <input
+                            className="form-input"
+                            type="text"
+                            placeholder="Ví dụ: an_nv"
+                            value={editStudentUsername}
+                            onChange={e => setEditStudentUsername(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: '1rem' }}>
+                          <label className="form-label">Mật khẩu</label>
+                          <input
+                            className="form-input"
+                            type="text"
+                            placeholder="Mật khẩu..."
+                            value={editStudentPassword}
+                            onChange={e => setEditStudentPassword(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                          <label className="form-label">Lớp</label>
+                          <select
+                            className="form-input"
+                            value={editStudentClassName}
+                            onChange={e => setEditStudentClassName(e.target.value)}
+                            style={{ height: '2.7rem', padding: '0.5rem', background: 'hsla(var(--background-card-raw) / 0.6)' }}
+                          >
+                            <option value="">-- Chọn lớp --</option>
+                            {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                          </select>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                          <button className="btn btn-secondary" type="button" onClick={() => setEditingStudent(null)}>Hủy</button>
+                          <button className="btn btn-primary" type="submit">Lưu Thay Đổi</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
