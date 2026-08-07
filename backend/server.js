@@ -8,6 +8,11 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+function getHeaderVal(req, name) {
+  const val = req.headers[name.toLowerCase()];
+  return val ? decodeURIComponent(val) : '';
+}
+
 // Part ranges for dynamic question counting
 const PART_RANGES = {
   reading: [
@@ -205,7 +210,7 @@ app.post('/api/users/bulk', async (req, res) => {
 });
 
 app.put('/api/users/:id', async (req, res) => {
-  if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
+  if (getHeaderVal(req, 'x-user-role') !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
   const { fullName, username, password, className } = req.body;
   const users = await db.getUsers();
   const user = users.find(u => u.id === req.params.id);
@@ -227,7 +232,7 @@ app.put('/api/users/:id', async (req, res) => {
 });
 
 app.delete('/api/users/:id', async (req, res) => {
-  if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
+  if (getHeaderVal(req, 'x-user-role') !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
   await db.deleteUser(req.params.id);
   res.json({ success: true });
 });

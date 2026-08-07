@@ -75,33 +75,6 @@ export default function App() {
   const [editStudentPassword, setEditStudentPassword] = useState('');
   const [editStudentClassName, setEditStudentClassName] = useState('');
 
-  const handleSaveEditStudent = async (e) => {
-    e.preventDefault();
-    if (!editingStudent) return;
-    try {
-      const res = await fetch(`${API_BASE}/users/${editingStudent.id}`, {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify({
-          fullName: editStudentFullName,
-          username: editStudentUsername,
-          password: editStudentPassword,
-          className: editStudentClassName
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || 'Cập nhật tài khoản thất bại.');
-        return;
-      }
-      setEditingStudent(null);
-      fetchTeacherData();
-      alert('Cập nhật tài khoản học sinh thành công!');
-    } catch (err) {
-      alert('Lỗi kết nối máy chủ.');
-    }
-  };
-
   // Bulk CSV Import
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
@@ -687,6 +660,34 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
       fetchTeacherData();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleSaveEditStudent = async (e) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+    try {
+      const res = await fetch(`${API_BASE}/users/${editingStudent.id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify({
+          fullName: editStudentFullName,
+          username: editStudentUsername,
+          password: editStudentPassword,
+          className: editStudentClassName
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Cập nhật tài khoản thất bại.');
+        return;
+      }
+      setEditingStudent(null);
+      fetchTeacherData();
+      alert('Cập nhật tài khoản học sinh thành công!');
+    } catch (err) {
+      console.error("Error saving student edit:", err);
+      alert('Lỗi kết nối máy chủ.');
     }
   };
 
