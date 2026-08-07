@@ -90,8 +90,45 @@ export default function App() {
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [csvDefaultClass, setCsvDefaultClass] = useState('');
+  const [csvEncoding, setCsvEncoding] = useState('windows-1258');
   const [bulkCsvText, setBulkCsvText] = useState('');
   const [bulkResult, setBulkResult] = useState(null);
+  const uploadedFileRef = useRef(null);
+
+  const processFileRead = (file, encoding) => {
+    if (!file) return;
+    uploadedFileRef.current = file;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const buffer = evt.target.result;
+      const bytes = new Uint8Array(buffer);
+      let offset = 0;
+      if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+        offset = 3;
+      }
+      try {
+        const decoder = new TextDecoder(encoding || 'windows-1258');
+        setBulkCsvText(decoder.decode(bytes.subarray(offset)));
+      } catch (err) {
+        const decoder = new TextDecoder('utf-8');
+        setBulkCsvText(decoder.decode(bytes.subarray(offset)));
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    processFileRead(file, csvEncoding);
+  };
+
+  const handleEncodingChange = (newEnc) => {
+    setCsvEncoding(newEnc);
+    if (uploadedFileRef.current) {
+      processFileRead(uploadedFileRef.current, newEnc);
+    }
+  };
 
   const handleBulkImportSubmit = async (e) => {
     e.preventDefault();
@@ -145,33 +182,6 @@ export default function App() {
     } catch (err) {
       setBulkResult({ error: "Failed to connect to server." });
     }
-  };
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      let content = evt.target.result || '';
-      if (content.charCodeAt(0) === 0xFEFF) {
-        content = content.slice(1);
-      }
-      // If corrupted replacement characters occur due to ANSI encoding from Excel, fallback to windows-1258
-      if (content.includes('\uFFFD')) {
-        const fallbackReader = new FileReader();
-        fallbackReader.onload = (evt2) => {
-          let content2 = evt2.target.result || '';
-          if (content2.charCodeAt(0) === 0xFEFF) {
-            content2 = content2.slice(1);
-          }
-          setBulkCsvText(content2);
-        };
-        fallbackReader.readAsText(file, 'windows-1258');
-        return;
-      }
-      setBulkCsvText(content);
-    };
-    reader.readAsText(file, 'UTF-8');
   };
 
   // Scoreboard Filters & Views
@@ -2615,7 +2625,18 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
                     📥 Download Sample CSV
                   </span>
                 </label>
-                <input type="file" accept=".csv,.txt" className="form-input" onChange={handleFileUpload} />
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input type="file" accept=".csv,.txt" className="form-input" style={{ flex: 1 }} onChange={handleFileUpload} />
+                  <select
+                    className="form-input"
+                    style={{ width: '230px', fontSize: '0.85rem', height: '2.7rem' }}
+                    value={csvEncoding}
+                    onChange={e => handleEncodingChange(e.target.value)}
+                  >
+                    <option value="windows-1258">File Format: Excel (Windows-1258)</option>
+                    <option value="utf-8">File Format: Google Sheets / UTF-8</option>
+                  </select>
+                </div>
               </div>
 
               <div className="form-group" style={{ marginBottom: '1rem' }}>
