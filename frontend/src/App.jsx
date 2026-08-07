@@ -1681,10 +1681,10 @@ export default function App() {
                                 <td>{new Date(sub.submittedAt).toLocaleDateString()}</td>
                                 <td>
                                   <div style={{ fontWeight: '600', color: pct >= 50 ? 'hsl(var(--success))' : 'hsl(var(--danger))' }}>
-                                    {sub.score} / {sub.totalQuestions}
+                                    {((sub.score / (sub.totalQuestions || 1)) * 10).toFixed(1)} / 10 <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>({sub.score}/{sub.totalQuestions})</span>
                                   </div>
                                   <div style={{ fontSize: '0.75rem', color: 'hsl(var(--text-secondary))', marginTop: '0.15rem' }}>
-                                    R: {sub.readingScore || 0}/52 | L: {sub.listeningScore || 0}/30
+                                    R: {sub.readingScore || 0}/{sub.readingTotal || 52} | L: {sub.listeningScore || 0}/{sub.listeningTotal || 30}
                                   </div>
                                 </td>
                                 <td>{pct}%</td>
@@ -2053,22 +2053,28 @@ export default function App() {
             <p style={{ color: 'hsl(var(--text-secondary))' }}>Exam: {reportSubmission.examTitle}</p>
 
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', margin: '1.5rem 0', flexWrap: 'wrap' }}>
+              <div className="results-score-circle" style={{ borderColor: 'hsl(var(--primary))' }}>
+                <span className="results-score-num" style={{ color: 'hsl(var(--primary))' }}>
+                  {((reportSubmission.score / (reportSubmission.totalQuestions || 1)) * 10).toFixed(1)}
+                </span>
+                <span className="results-score-label">/ 10 Scale</span>
+              </div>
               <div className="results-score-circle">
                 <span className="results-score-num">{reportSubmission.score}</span>
-                <span className="results-score-label">/ 82 Total</span>
+                <span className="results-score-label">/ {reportSubmission.totalQuestions || 82} Raw</span>
               </div>
               <div className="results-score-circle reading">
                 <span className="results-score-num">{reportSubmission.readingScore || 0}</span>
-                <span className="results-score-label">/ 52 Reading</span>
+                <span className="results-score-label">/ {reportSubmission.readingTotal || 52} Reading</span>
               </div>
               <div className="results-score-circle listening">
                 <span className="results-score-num">{reportSubmission.listeningScore || 0}</span>
-                <span className="results-score-label">/ 30 Listening</span>
+                <span className="results-score-label">/ {reportSubmission.listeningTotal || 30} Listening</span>
               </div>
             </div>
 
             <p style={{ fontSize: '1.1rem', fontWeight: '600', color: 'hsl(var(--text-primary))' }}>
-              Accuracy: {Math.round((reportSubmission.score / reportSubmission.totalQuestions) * 100)}%
+              Accuracy: {Math.round((reportSubmission.score / (reportSubmission.totalQuestions || 1)) * 100)}% ({reportSubmission.score}/{reportSubmission.totalQuestions || 82} correct)
             </p>
             {reportSubmission.tabSwitches > 0 && (
               <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'hsl(var(--danger))', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>

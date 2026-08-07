@@ -431,7 +431,9 @@ app.post('/api/submissions', async (req, res) => {
     details[qKey] = { studentAnswer, correctAnswer, isCorrect };
   }
 
-  const totalQuestions = readingKeys.length + listeningKeys.length;
+  const readingTotal = readingKeys.length;
+  const listeningTotal = listeningKeys.length;
+  const totalQuestions = readingTotal + listeningTotal;
 
   const submission = {
     id: 's-' + Date.now(),
@@ -442,6 +444,8 @@ app.post('/api/submissions', async (req, res) => {
     score,
     readingScore,
     listeningScore,
+    readingTotal,
+    listeningTotal,
     totalQuestions,
     tabSwitches: tabSwitches || 0,
     answers,
