@@ -190,7 +190,7 @@ export default function App() {
     );
   };
 
-  // Navigation with History API (Prevents Back button from exiting app)
+  // Navigation with History API (Prevents Back & Forward buttons from exiting app)
   const changeView = (nextView, replace = false) => {
     if (nextView === currentView) return;
     try {
@@ -206,12 +206,16 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Handle Browser & Mobile Phone Back Button (PopState)
+  // Push base history state on user login / app startup
   useEffect(() => {
+    const rootHome = user ? (user.role === 'teacher' ? 'teacher_exams' : 'student_exams') : 'login';
     if (!window.history.state || !window.history.state.view) {
-      window.history.replaceState({ view: currentView }, '', window.location.pathname + window.location.search);
+      window.history.pushState({ view: rootHome }, '', window.location.pathname + window.location.search);
     }
+  }, [user]);
 
+  // Handle Browser & Mobile Phone Back/Forward Buttons (PopState)
+  useEffect(() => {
     const handlePopState = (event) => {
       // 1. Intercept Back button during active exam session
       if (currentView === 'student_session') {
@@ -220,23 +224,30 @@ export default function App() {
           "⚠️ CẢNH BÁO: Bạn đang trong bài thi!\nNếu rời khỏi, bài thi của bạn sẽ chưa được nộp hoàn tất. Bạn có chắc chắn muốn rời khỏi bài thi không?"
         );
         if (confirmExit) {
-          changeView('student_exams', true);
+          const rootHome = user?.role === 'teacher' ? 'teacher_exams' : 'student_exams';
+          changeView(rootHome, true);
         }
         return;
       }
 
-      // 2. In-app navigation back
+      // 2. Navigation using browser Back & Forward buttons
       const targetView = event.state?.view;
+
+      // Special case: If user clicks Back on student_result screen and pops back to student_session
+      if (targetView === 'student_session' && currentView === 'student_result') {
+        const rootHome = user?.role === 'teacher' ? 'teacher_exams' : 'student_exams';
+        setCurrentView(rootHome);
+        window.history.replaceState({ view: rootHome }, '', window.location.pathname + window.location.search);
+        return;
+      }
+
       if (targetView) {
         setCurrentView(targetView);
       } else {
-        if (user?.role === 'teacher') {
-          setCurrentView('teacher_exams');
-        } else if (user?.role === 'student') {
-          setCurrentView('student_exams');
-        } else {
-          setCurrentView('login');
-        }
+        // 3. Trap: If user hits back past initial app entry, push root view back so browser NEVER exits app!
+        const rootHome = user ? (user.role === 'teacher' ? 'teacher_exams' : 'student_exams') : 'login';
+        window.history.pushState({ view: rootHome }, '', window.location.pathname + window.location.search);
+        setCurrentView(rootHome);
       }
     };
 
@@ -698,7 +709,7 @@ export default function App() {
         return;
       }
       setReportSubmission(data);
-      changeView('student_result', true);
+      changeView('student_result', false);
       if (isAuto) alert(autoReason);
       else alert('Submitted successfully!');
       fetchStudentData();
