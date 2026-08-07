@@ -63,6 +63,7 @@ export default function App() {
   const [submissions, setSubmissions] = useState([]);
   const [classes, setClasses] = useState([]);
   const [editingExam, setEditingExam] = useState(null);
+  const [newStudentFullName, setNewStudentFullName] = useState('');
   const [newStudentName, setNewStudentName] = useState('');
   const [newStudentPass, setNewStudentPass] = useState('');
   const [newStudentClass, setNewStudentClass] = useState('');
@@ -87,15 +88,18 @@ export default function App() {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      if (i === 0 && (line.toLowerCase().includes('username') || line.toLowerCase().includes('password'))) {
+      if (i === 0 && (line.toLowerCase().includes('username') || line.toLowerCase().includes('mật khẩu') || line.toLowerCase().includes('tên'))) {
         continue;
       }
       const parts = line.split(/[,;\t]+/).map(p => p.trim());
-      if (parts.length > 0 && parts[0]) {
-        const username = parts[0];
-        const password = parts[1] || '123456';
-        const className = parts[2] || csvDefaultClass || '';
-        parsedStudents.push({ username, password, className });
+      if (parts.length >= 4) {
+        parsedStudents.push({ fullName: parts[0], username: parts[1], password: parts[2], className: parts[3] });
+      } else if (parts.length === 3) {
+        parsedStudents.push({ fullName: parts[0], username: parts[1], password: parts[2], className: csvDefaultClass || '' });
+      } else if (parts.length === 2) {
+        parsedStudents.push({ fullName: parts[0], username: parts[1], password: '123456', className: csvDefaultClass || '' });
+      } else if (parts.length === 1 && parts[0]) {
+        parsedStudents.push({ fullName: parts[0], username: parts[0], password: '123456', className: csvDefaultClass || '' });
       }
     }
 
@@ -527,13 +531,19 @@ export default function App() {
       const res = await fetch(`${API_BASE}/users`, {
         method: 'POST',
         headers: getHeaders(),
-        body: JSON.stringify({ username: newStudentName, password: newStudentPass, className: newStudentClass })
+        body: JSON.stringify({
+          fullName: newStudentFullName || newStudentName,
+          username: newStudentName,
+          password: newStudentPass,
+          className: newStudentClass
+        })
       });
       if (!res.ok) {
         const data = await res.json();
         setErrorMsg(data.error || 'Lỗi khi thêm học sinh.');
         return;
       }
+      setNewStudentFullName('');
       setNewStudentName('');
       setNewStudentPass('');
       setNewStudentClass('');
@@ -678,7 +688,7 @@ export default function App() {
             <span className="user-role-badge">{user.role === 'teacher' ? 'Teacher' : 'Student'}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <User size={16} />
-              <strong style={{ fontSize: '0.95rem' }}>{user.username}</strong>
+              <strong style={{ fontSize: '0.95rem' }}>{user.fullName || user.username}</strong>
             </div>
             <button className="btn-logout" onClick={handleLogout}>
               <LogOut size={16} />
@@ -696,8 +706,8 @@ export default function App() {
               <h1 style={{ fontSize: '1.85rem', fontWeight: '800', margin: 0, color: 'hsl(var(--primary))', letterSpacing: '-0.02em' }}>ATO Test Hub</h1>
               <span style={{ fontSize: '0.85rem', color: 'hsl(var(--text-secondary))', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', marginTop: '0.2rem' }}>Enjoy Every Test</span>
             </div>
-            <h2 style={{ fontSize: '1.2rem', textAlign: 'center', marginTop: '0.25rem', marginBottom: '0.25rem' }}>Sign In</h2>
-            <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'hsl(var(--text-muted))', marginBottom: '1.5rem' }}>Enter your account credentials to get started</p>
+            <h2 style={{ fontSize: '1.2rem', textAlign: 'center', marginTop: '0.25rem', marginBottom: '0.25rem' }}>Đăng Nhập</h2>
+            <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'hsl(var(--text-muted))', marginBottom: '1.5rem' }}>Dùng Tên đăng nhập (Username) và Mật khẩu để đăng nhập</p>
             {errorMsg && (
               <div style={{ color: 'hsl(var(--danger))', background: 'hsla(var(--danger) / 0.1)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.25rem', fontSize: '0.9rem', textAlign: 'center', border: '1px solid hsla(var(--danger) / 0.2)' }}>
                 {errorMsg}
@@ -708,15 +718,15 @@ export default function App() {
               handleLogin(e.target.username.value, e.target.password.value);
             }}>
               <div className="form-group">
-                <label className="form-label">Username</label>
-                <input className="form-input" name="username" type="text" placeholder="e.g. student1 or teacher" required />
+                <label className="form-label">Tên đăng nhập (Username)</label>
+                <input className="form-input" name="username" type="text" placeholder="Nhập username (VD: an_nv hoặc teacher)" required />
               </div>
               <div className="form-group">
-                <label className="form-label">Password</label>
+                <label className="form-label">Mật khẩu (Password)</label>
                 <input className="form-input" name="password" type="password" placeholder="••••••" required />
               </div>
               <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} type="submit">
-                Sign In
+                Đăng Nhập
               </button>
             </form>
           </div>
@@ -1374,7 +1384,8 @@ export default function App() {
                             <div key={st.id} style={{ border: activeSession ? '1.5px solid hsl(var(--success))' : '1px solid hsl(var(--border-color))', borderRadius: 'var(--radius-md)', padding: '1rem', background: activeSession ? 'hsla(var(--success) / 0.03)' : 'hsl(var(--card-bg))', transition: 'all 0.2s ease' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <strong style={{ fontSize: '1rem', color: 'hsl(var(--text-primary))' }}>{st.username}</strong>
+                                  <strong style={{ fontSize: '1rem', color: 'hsl(var(--text-primary))' }}>{st.fullName || st.username}</strong>
+                                  {st.fullName && <span style={{ fontSize: '0.85rem', color: 'hsl(var(--text-muted))' }}>({st.username})</span>}
                                   {activeSession && (
                                     <span style={{ fontSize: '0.75rem', fontWeight: 'bold', background: 'hsla(var(--success) / 0.15)', color: 'hsl(var(--success))', padding: '0.15rem 0.5rem', borderRadius: 'var(--radius-sm)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                                       <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'hsl(var(--success))' }}></span> LIVE NOW
@@ -1496,49 +1507,52 @@ export default function App() {
                 <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '1.5rem' }}>Create login accounts for students to access and submit exams.</p>
 
                 <form onSubmit={handleAddStudent} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                  <div className="form-group" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }}>
-                    <label className="form-label">Username</label>
-                    <input className="form-input" type="text" placeholder="e.g. student_an" value={newStudentName} onChange={e => setNewStudentName(e.target.value)} required />
+                  <div className="form-group" style={{ flex: 1.2, minWidth: '160px', marginBottom: 0 }}>
+                    <label className="form-label">Họ và Tên</label>
+                    <input className="form-input" type="text" placeholder="e.g. Nguyễn Văn A" value={newStudentFullName} onChange={e => setNewStudentFullName(e.target.value)} required />
                   </div>
-                  <div className="form-group" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }}>
-                    <label className="form-label">Password</label>
-                    <input className="form-input" type="text" placeholder="Enter password..." value={newStudentPass} onChange={e => setNewStudentPass(e.target.value)} required />
+                  <div className="form-group" style={{ flex: 1, minWidth: '140px', marginBottom: 0 }}>
+                    <label className="form-label">Tên đăng nhập (Username)</label>
+                    <input className="form-input" type="text" placeholder="e.g. an_nv" value={newStudentName} onChange={e => setNewStudentName(e.target.value)} required />
                   </div>
-                  <div className="form-group" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }}>
-                    <label className="form-label">Class</label>
+                  <div className="form-group" style={{ flex: 1, minWidth: '130px', marginBottom: 0 }}>
+                    <label className="form-label">Mật khẩu</label>
+                    <input className="form-input" type="text" placeholder="Password..." value={newStudentPass} onChange={e => setNewStudentPass(e.target.value)} required />
+                  </div>
+                  <div className="form-group" style={{ flex: 1, minWidth: '130px', marginBottom: 0 }}>
+                    <label className="form-label">Lớp</label>
                     <select className="form-input" value={newStudentClass} onChange={e => setNewStudentClass(e.target.value)} required style={{ height: '2.7rem', padding: '0.5rem', background: 'hsla(var(--background-card-raw) / 0.6)', color: 'hsl(var(--text-primary))' }}>
-                      <option value="">-- Select class --</option>
+                      <option value="">-- Chọn lớp --</option>
                       {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                     </select>
                   </div>
                   <button className="btn btn-primary" type="submit" style={{ height: '2.7rem' }}>
-                    <Plus size={16} /> Add Student
+                    <Plus size={16} /> Thêm Học Sinh
                   </button>
                 </form>
 
                 {/* Bulk CSV Import */}
                 <div style={{ marginBottom: '2rem' }}>
                   <button className="btn btn-secondary btn-sm" onClick={() => { setShowBulkImport(!showBulkImport); setBulkResult(null); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Upload size={14} /> {showBulkImport ? 'Hide' : 'Bulk Import (CSV)'}
+                    <Upload size={14} /> {showBulkImport ? 'Ẩn' : 'Nhập Danh Sách Hàng Loạt (CSV)'}
                   </button>
                   {showBulkImport && (
                     <div style={{ marginTop: '1rem', padding: '1rem', background: 'hsla(var(--primary) / 0.05)', borderRadius: 'var(--radius-sm)', border: '1px solid hsla(var(--primary) / 0.15)' }}>
                       <p style={{ fontSize: '0.85rem', color: 'hsl(var(--text-secondary))', marginBottom: '0.5rem' }}>
-                        One student per line: <code style={{ background: 'hsla(var(--border-color)/0.3)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>username,password,classname</code>
+                        Mỗi học sinh 1 dòng: <code style={{ background: 'hsla(var(--border-color)/0.3)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>Họ và tên,Tên đăng nhập,Mật khẩu,Lớp</code>
                       </p>
                       <textarea
-                        rows={6} placeholder={"student1,pass123,12A1\nstudent2,pass456,12A2"}
+                        rows={6} placeholder={"Nguyễn Văn A,an_nv,pass123,12A1\nTrần Thị B,b_tt,pass456,12A2"}
                         value={bulkCsvText} onChange={e => setBulkCsvText(e.target.value)}
                         style={{ width: '100%', fontFamily: 'monospace', fontSize: '0.85rem', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid hsl(var(--border-color))', background: 'hsl(var(--card-bg))', color: 'hsl(var(--text-primary))', resize: 'vertical', boxSizing: 'border-box' }}
                       />
-                      <button className="btn btn-primary btn-sm" style={{ marginTop: '0.5rem' }} onClick={handleBulkImport}>
-                        <FileText size={14} /> Import Students
+                      <button className="btn btn-primary btn-sm" style={{ marginTop: '0.5rem' }} onClick={handleBulkImportSubmit}>
+                        <FileText size={14} /> Tiến Hành Nhập Danh Sách
                       </button>
                       {bulkResult && (
                         <div style={{ marginTop: '0.75rem', fontSize: '0.85rem' }}>
                           {bulkResult.error && <p style={{ color: 'hsl(var(--danger))' }}>❌ {bulkResult.error}</p>}
-                          {bulkResult.created && <p style={{ color: 'hsl(var(--success))' }}>✅ Created: {bulkResult.created.length} ({bulkResult.created.join(', ')})</p>}
-                          {bulkResult.skipped?.length > 0 && <p style={{ color: 'hsl(var(--warning))' }}>⚠️ Skipped (already exist): {bulkResult.skipped.join(', ')}</p>}
+                          {bulkResult.success && <p style={{ color: 'hsl(var(--success))' }}>✅ {bulkResult.msg}</p>}
                         </div>
                       )}
                     </div>
@@ -1550,18 +1564,19 @@ export default function App() {
                 <div className="table-container">
                   <table className="data-table">
                     <thead><tr>
-                      <th>Username</th><th>Password</th><th>Class</th><th>Role</th><th style={{ width: '80px' }}>Delete</th>
+                      <th>Họ và Tên</th><th>Tên đăng nhập (Username)</th><th>Mật khẩu</th><th>Lớp</th><th>Vai trò</th><th style={{ width: '80px' }}>Xóa</th>
                     </tr></thead>
                     <tbody>
                       {students.length === 0 ? (
-                        <tr><td colSpan="5" style={{ textAlign: 'center', color: 'hsl(var(--text-muted))' }}>No student accounts yet.</td></tr>
+                        <tr><td colSpan="6" style={{ textAlign: 'center', color: 'hsl(var(--text-muted))' }}>Chưa có tài khoản học sinh nào.</td></tr>
                       ) : (
                         students.map(st => (
                           <tr key={st.id}>
-                            <td><strong>{st.username}</strong></td>
+                            <td><strong>{st.fullName || st.username}</strong></td>
+                            <td style={{ fontFamily: 'monospace', color: 'hsl(var(--primary))' }}>{st.username}</td>
                             <td style={{ fontFamily: 'monospace' }}>{st.password}</td>
-                            <td><span className="user-role-badge" style={{ background: 'hsla(var(--primary) / 0.08)', color: 'hsl(var(--primary))' }}>{st.className || 'Unassigned'}</span></td>
-                            <td>Student</td>
+                            <td><span className="user-role-badge" style={{ background: 'hsla(var(--primary) / 0.08)', color: 'hsl(var(--primary))' }}>{st.className || 'Chưa xếp lớp'}</span></td>
+                            <td>Học sinh</td>
                             <td><button className="btn btn-danger btn-sm" onClick={() => handleDeleteStudent(st.id)}><Trash2 size={14} /></button></td>
                           </tr>
                         ))
@@ -1710,7 +1725,8 @@ export default function App() {
                     {(() => {
                       const filteredStudents = students.filter(st => {
                         const matchClass = scoreFilterClass === 'All' || st.className === scoreFilterClass;
-                        const matchName = st.username.toLowerCase().includes(scoreSearchStudent.toLowerCase());
+                        const studentDisplayName = st.fullName || st.username;
+                        const matchName = studentDisplayName.toLowerCase().includes(scoreSearchStudent.toLowerCase()) || st.username.toLowerCase().includes(scoreSearchStudent.toLowerCase());
                         return matchClass && matchName;
                       });
 
@@ -1719,14 +1735,15 @@ export default function App() {
                       }
 
                       return filteredStudents.map(st => {
-                        const studentSubs = submissions.filter(sub => sub.studentId === st.id || sub.studentName === st.username);
+                        const studentSubs = submissions.filter(sub => sub.studentId === st.id || sub.studentName === st.username || sub.studentName === st.fullName);
                         const isExpanded = expandedStudentId === st.id;
                         return (
                           <div key={st.id} className="glass-card" style={{ background: 'hsl(var(--card-bg))', border: '1px solid hsl(var(--border-color))', padding: '1.25rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <div>
                                 <h4 style={{ margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                  <span>{st.username}</span>
+                                  <span>{st.fullName || st.username}</span>
+                                  {st.fullName && <span style={{ fontSize: '0.85rem', color: 'hsl(var(--text-muted))', fontWeight: 'normal' }}>({st.username})</span>}
                                   <span className="user-role-badge" style={{ background: 'hsla(var(--primary) / 0.08)', color: 'hsl(var(--primary))', fontSize: '0.75rem', padding: '0.05rem 0.4rem' }}>
                                     {st.className || 'Unassigned'}
                                   </span>

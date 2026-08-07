@@ -15,6 +15,7 @@ mongoose.connect(MONGODB_URI)
 
 const UserSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
+  fullName: { type: String, default: '' },
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   className: { type: String, default: '' },

@@ -121,7 +121,7 @@ app.post('/api/auth/login', async (req, res) => {
   const users = await db.getUsers();
   const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
   if (!user) return res.status(401).json({ error: 'Incorrect username or password.' });
-  res.json({ user: { id: user.id, username: user.username, role: user.role, className: user.className || '' } });
+  res.json({ user: { id: user.id, fullName: user.fullName || user.username, username: user.username, role: user.role, className: user.className || '' } });
 });
 
 // ---------------- USERS API ----------------
@@ -134,13 +134,20 @@ app.get('/api/users', async (req, res) => {
 
 app.post('/api/users', async (req, res) => {
   if (req.headers['x-user-role'] !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
-  const { username, password, className } = req.body;
+  const { fullName, username, password, className } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Username and password are required.' });
   const users = await db.getUsers();
   if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
     return res.status(400).json({ error: 'Username already exists.' });
   }
-  const newUser = { id: 'u-' + Date.now(), username, password, className: className || '', role: 'student' };
+  const newUser = {
+    id: 'u-' + Date.now(),
+    fullName: (fullName || username).trim(),
+    username: username.trim(),
+    password: password.trim(),
+    className: (className || '').trim(),
+    role: 'student'
+  };
   await db.saveUser(newUser);
   res.status(201).json(newUser);
 });
@@ -148,7 +155,7 @@ app.post('/api/users', async (req, res) => {
 // Bulk import students from CSV or list
 app.post('/api/users/bulk', async (req, res) => {
   if (getHeaderVal(req, 'x-user-role') !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
-  const { students, defaultClass } = req.body; // [{ username, password, className }]
+  const { students, defaultClass } = req.body; // [{ fullName, username, password, className }]
   if (!Array.isArray(students) || students.length === 0) {
     return res.status(400).json({ error: 'No student data provided.' });
   }
@@ -158,7 +165,8 @@ app.post('/api/users/bulk', async (req, res) => {
   const results = { created: [], updated: [], errors: [] };
 
   for (const s of students) {
-    const username = (s.username || s.name || '').trim();
+    const username = (s.username || '').trim();
+    const fullName = (s.fullName || s.name || username).trim();
     if (!username) { results.errors.push(`Row missing username`); continue; }
     const password = (s.password || '123456').trim();
     const className = (s.className || s.class || defaultClass || '').trim();
@@ -173,6 +181,7 @@ app.post('/api/users/bulk', async (req, res) => {
     const existingIndex = existingUsers.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
     if (existingIndex !== -1) {
       const userToUpdate = existingUsers[existingIndex];
+      userToUpdate.fullName = fullName || userToUpdate.fullName || username;
       userToUpdate.password = password || userToUpdate.password;
       if (className) userToUpdate.className = className;
       await db.saveUser(userToUpdate);
@@ -180,6 +189,7 @@ app.post('/api/users/bulk', async (req, res) => {
     } else {
       const newUser = {
         id: 'u-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        fullName: fullName || username,
         username,
         password,
         className: className || '',
