@@ -2357,8 +2357,8 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
                 <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>Option 1: Upload CSV / TXT File</span>
                   <span style={{ fontSize: '0.8rem', color: 'hsl(var(--primary))', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => {
-                    const sample = "username,password,className\nstudent1,123456,B1.4F\nstudent2,123456,B1.4F\nstudent3,123456,B1.4F";
-                    const blob = new Blob([sample], { type: 'text/csv' });
+                    const sample = "fullName,username,password,className\nNguyễn Văn An,an_nv,123456,B1.4F\nTrần Thị Bình,binh_tt,123456,B1.4F\nLê Văn Cường,cuong_lv,123456,B1.4F";
+                    const blob = new Blob(['\uFEFF' + sample], { type: 'text/csv;charset=utf-8;' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
@@ -2372,11 +2372,11 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
               </div>
 
               <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label">Option 2: Paste List (Format: username, password, class)</label>
+                <label className="form-label">Option 2: Paste List (Định dạng: Họ và tên, Username, Password, Class)</label>
                 <textarea
                   className="form-input"
                   rows="6"
-                  placeholder={"e.g.\nNguyenVana, 123456, B1.4F\nTranVanb, 123456, B1.4F"}
+                  placeholder={"Ví dụ:\nNguyễn Văn An, an_nv, 123456, B1.4F\nTrần Thị Bình, binh_tt, 123456, B1.4F"}
                   value={bulkCsvText}
                   onChange={e => setBulkCsvText(e.target.value)}
                   style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
