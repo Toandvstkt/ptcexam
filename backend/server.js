@@ -237,6 +237,16 @@ app.delete('/api/users/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/api/users/bulk-delete', async (req, res) => {
+  if (getHeaderVal(req, 'x-user-role') !== 'teacher') return res.status(403).json({ error: 'Access denied.' });
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'No student accounts selected for deletion.' });
+  }
+  await db.deleteUsers(ids);
+  res.json({ success: true, count: ids.length });
+});
+
 // ---------------- CLASSES API ----------------
 
 app.get('/api/classes', async (req, res) => {

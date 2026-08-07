@@ -100,6 +100,10 @@ module.exports = {
     await User.deleteOne({ id: userId });
   },
 
+  async deleteUsers(userIds) {
+    await User.deleteMany({ id: { $in: userIds } });
+  },
+
   // Exams CRUD
   async getExams() {
     return await Exam.find().lean();

@@ -75,6 +75,16 @@ export default function App() {
   const [editStudentPassword, setEditStudentPassword] = useState('');
   const [editStudentClassName, setEditStudentClassName] = useState('');
 
+  // Multi-select & Custom Modals / Toast state
+  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
+  const [confirmModal, setConfirmModal] = useState(null); // { title, message, confirmText, confirmVariant, onConfirm }
+  const [toast, setToast] = useState(null); // { message, type: 'success' | 'error' }
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
   // Bulk CSV Import
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
@@ -92,7 +102,7 @@ export default function App() {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      if (i === 0 && (line.toLowerCase().includes('username') || line.toLowerCase().includes('mật khẩu') || line.toLowerCase().includes('tên'))) {
+      if (i === 0 && (line.toLowerCase().includes('username') || line.toLowerCase().includes('mật khẩu') || line.toLowerCase().includes('tên') || line.toLowerCase().includes('password') || line.toLowerCase().includes('name'))) {
         continue;
       }
       const parts = line.split(/[,;\t]+/).map(p => p.trim());
@@ -241,7 +251,7 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
       if (currentView === 'student_session') {
         window.history.pushState({ view: 'student_session' }, '', getPathForView('student_session'));
         const confirmExit = window.confirm(
-          "⚠️ CẢNH BÁO: Bạn đang trong bài thi!\nNếu rời khỏi, bài thi của bạn sẽ chưa được nộp hoàn tất. Bạn có chắc chắn muốn rời khỏi bài thi không?"
+          "⚠️ WARNING: You are currently taking an exam!\nIf you leave, your exam submission will not be complete. Are you sure you want to exit?"
         );
         if (confirmExit) {
           const rootHome = user?.role === 'teacher' ? 'teacher_exams' : 'student_exams';
@@ -280,7 +290,7 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
     if (currentView !== 'student_session') return;
     const handleBeforeUnload = (e) => {
       e.preventDefault();
-      e.returnValue = 'Bạn đang trong bài thi. Nếu rời khỏi trang, dữ liệu làm bài có thể bị mất!';
+      e.returnValue = 'You are currently taking an exam. Leaving this page may cause your answers to be lost!';
       return e.returnValue;
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -459,27 +469,37 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
       });
       if (!res.ok) {
         const data = await res.json();
-        setErrorMsg(data.error || 'Lỗi khi tạo lớp.');
+        setErrorMsg(data.error || 'Error creating class.');
         return;
       }
       setNewClassName('');
       fetchTeacherData();
+      showToast('Class created successfully.');
     } catch (err) {
-      setErrorMsg('Không thể tạo lớp học.');
+      setErrorMsg('Unable to create class.');
     }
   };
 
-  const handleDeleteClass = async (id) => {
-    if (!window.confirm("Xóa lớp học này?")) return;
-    try {
-      await fetch(`${API_BASE}/classes/${id}`, {
-        method: 'DELETE',
-        headers: getHeaders()
-      });
-      fetchTeacherData();
-    } catch (err) {
-      console.error(err);
-    }
+  const handleDeleteClass = (id, className) => {
+    setConfirmModal({
+      title: 'Delete Class',
+      message: `Are you sure you want to delete class "${className || id}"?`,
+      confirmText: 'Delete Class',
+      confirmVariant: 'danger',
+      onConfirm: async () => {
+        try {
+          await fetch(`${API_BASE}/classes/${id}`, {
+            method: 'DELETE',
+            headers: getHeaders()
+          });
+          fetchTeacherData();
+          showToast('Class deleted successfully.');
+        } catch (err) {
+          console.error(err);
+          showToast('Failed to delete class.', 'error');
+        }
+      }
+    });
   };
 
   // Fetch Student data
@@ -509,13 +529,13 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
       });
       const data = await res.json();
       if (!res.ok) {
-        setErrorMsg(data.error || 'Có lỗi xảy ra.');
+        setErrorMsg(data.error || 'An error occurred during sign in.');
         return;
       }
       localStorage.setItem('exam_user', JSON.stringify(data.user));
       setUser(data.user);
     } catch (err) {
-      setErrorMsg('Không thể kết nối đến máy chủ.');
+      setErrorMsg('Unable to connect to the server.');
     }
   };
 
@@ -607,17 +627,26 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
     }
   };
 
-  const handleDeleteExam = async (id) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa đề thi này? Tất cả bài làm liên quan cũng sẽ bị xóa.")) return;
-    try {
-      await fetch(`${API_BASE}/exams/${id}`, {
-        method: 'DELETE',
-        headers: getHeaders()
-      });
-      fetchTeacherData();
-    } catch (err) {
-      console.error(err);
-    }
+  const handleDeleteExam = (id, title) => {
+    setConfirmModal({
+      title: 'Delete Exam',
+      message: `Are you sure you want to delete exam "${title || 'this exam'}"? All student submissions for this exam will also be permanently deleted.`,
+      confirmText: 'Delete Exam',
+      confirmVariant: 'danger',
+      onConfirm: async () => {
+        try {
+          await fetch(`${API_BASE}/exams/${id}`, {
+            method: 'DELETE',
+            headers: getHeaders()
+          });
+          fetchTeacherData();
+          showToast('Exam deleted successfully.');
+        } catch (err) {
+          console.error(err);
+          showToast('Failed to delete exam.', 'error');
+        }
+      }
+    });
   };
 
   const handleAddStudent = async (e) => {
@@ -637,7 +666,8 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
       });
       if (!res.ok) {
         const data = await res.json();
-        setErrorMsg(data.error || 'Lỗi khi thêm học sinh.');
+        setErrorMsg(data.error || 'Error adding student account.');
+        showToast(data.error || 'Error adding student account.', 'error');
         return;
       }
       setNewStudentFullName('');
@@ -645,22 +675,64 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
       setNewStudentPass('');
       setNewStudentClass('');
       fetchTeacherData();
+      showToast('Student account created successfully!');
     } catch (err) {
-      setErrorMsg('Không thể thêm học sinh.');
+      setErrorMsg('Unable to add student account.');
+      showToast('Unable to add student account.', 'error');
     }
   };
 
-  const handleDeleteStudent = async (id) => {
-    if (!window.confirm("Delete this student account?")) return;
-    try {
-      await fetch(`${API_BASE}/users/${id}`, {
-        method: 'DELETE',
-        headers: getHeaders()
-      });
-      fetchTeacherData();
-    } catch (err) {
-      console.error(err);
-    }
+  const handleDeleteStudent = (id, name) => {
+    setConfirmModal({
+      title: 'Delete Student Account',
+      message: `Are you sure you want to delete student account "${name || 'selected student'}"?`,
+      confirmText: 'Delete Account',
+      confirmVariant: 'danger',
+      onConfirm: async () => {
+        try {
+          await fetch(`${API_BASE}/users/${id}`, {
+            method: 'DELETE',
+            headers: getHeaders()
+          });
+          setSelectedStudentIds(prev => prev.filter(sId => sId !== id));
+          fetchTeacherData();
+          showToast('Student account deleted successfully.');
+        } catch (err) {
+          console.error(err);
+          showToast('Failed to delete student account.', 'error');
+        }
+      }
+    });
+  };
+
+  const handleBulkDeleteSelectedStudents = () => {
+    if (selectedStudentIds.length === 0) return;
+    const count = selectedStudentIds.length;
+    setConfirmModal({
+      title: 'Delete Selected Student Accounts',
+      message: `Are you sure you want to delete ${count} selected student account(s)? This action cannot be undone.`,
+      confirmText: `Delete ${count} Account(s)`,
+      confirmVariant: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${API_BASE}/users/bulk-delete`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ ids: selectedStudentIds })
+          });
+          if (res.ok) {
+            setSelectedStudentIds([]);
+            fetchTeacherData();
+            showToast(`Successfully deleted ${count} student account(s).`);
+          } else {
+            showToast('Failed to delete selected student accounts.', 'error');
+          }
+        } catch (err) {
+          console.error("Bulk delete error:", err);
+          showToast('Server connection error while deleting student accounts.', 'error');
+        }
+      }
+    });
   };
 
   const handleSaveEditStudent = async (e) => {
@@ -679,15 +751,15 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || 'Cập nhật tài khoản thất bại.');
+        showToast(data.error || 'Failed to update student account.', 'error');
         return;
       }
       setEditingStudent(null);
       fetchTeacherData();
-      alert('Cập nhật tài khoản học sinh thành công!');
+      showToast('Student account updated successfully!');
     } catch (err) {
       console.error("Error saving student edit:", err);
-      alert('Lỗi kết nối máy chủ.');
+      showToast('Server connection error.', 'error');
     }
   };
 
@@ -831,8 +903,8 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
               <h1 style={{ fontSize: '1.85rem', fontWeight: '800', margin: 0, color: 'hsl(var(--primary))', letterSpacing: '-0.02em' }}>ATO Test Hub</h1>
               <span style={{ fontSize: '0.85rem', color: 'hsl(var(--text-secondary))', fontWeight: '600', letterSpacing: '0.05em', textTransform: 'uppercase', marginTop: '0.2rem' }}>Enjoy Every Test</span>
             </div>
-            <h2 style={{ fontSize: '1.2rem', textAlign: 'center', marginTop: '0.25rem', marginBottom: '0.25rem' }}>Đăng Nhập</h2>
-            <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'hsl(var(--text-muted))', marginBottom: '1.5rem' }}>Dùng Tên đăng nhập (Username) và Mật khẩu để đăng nhập</p>
+            <h2 style={{ fontSize: '1.2rem', textAlign: 'center', marginTop: '0.25rem', marginBottom: '0.25rem' }}>Sign In</h2>
+            <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'hsl(var(--text-muted))', marginBottom: '1.5rem' }}>Enter your Username and Password to sign in</p>
             {errorMsg && (
               <div style={{ color: 'hsl(var(--danger))', background: 'hsla(var(--danger) / 0.1)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.25rem', fontSize: '0.9rem', textAlign: 'center', border: '1px solid hsla(var(--danger) / 0.2)' }}>
                 {errorMsg}
@@ -843,15 +915,15 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
               handleLogin(e.target.username.value, e.target.password.value);
             }}>
               <div className="form-group">
-                <label className="form-label">Tên đăng nhập (Username)</label>
-                <input className="form-input" name="username" type="text" placeholder="Nhập username (VD: an_nv hoặc teacher)" required />
+                <label className="form-label">Username</label>
+                <input className="form-input" name="username" type="text" placeholder="Enter username (e.g. john_d or teacher)" required />
               </div>
               <div className="form-group">
-                <label className="form-label">Mật khẩu (Password)</label>
+                <label className="form-label">Password</label>
                 <input className="form-input" name="password" type="password" placeholder="••••••" required />
               </div>
               <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} type="submit">
-                Đăng Nhập
+                Sign In
               </button>
             </form>
           </div>
@@ -1029,7 +1101,7 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
                                   }
                                 }}
                               />
-                              Tất cả các lớp (All)
+                              All Classes (All)
                             </label>
 
                             {classes.map(c => {
@@ -1633,46 +1705,46 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
 
                 <form onSubmit={handleAddStudent} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1rem', flexWrap: 'wrap' }}>
                   <div className="form-group" style={{ flex: 1.2, minWidth: '160px', marginBottom: 0 }}>
-                    <label className="form-label">Họ và Tên</label>
-                    <input className="form-input" type="text" placeholder="e.g. Nguyễn Văn A" value={newStudentFullName} onChange={e => setNewStudentFullName(e.target.value)} required />
+                    <label className="form-label">Full Name</label>
+                    <input className="form-input" type="text" placeholder="e.g. John Doe" value={newStudentFullName} onChange={e => setNewStudentFullName(e.target.value)} required />
                   </div>
                   <div className="form-group" style={{ flex: 1, minWidth: '140px', marginBottom: 0 }}>
-                    <label className="form-label">Tên đăng nhập (Username)</label>
-                    <input className="form-input" type="text" placeholder="e.g. an_nv" value={newStudentName} onChange={e => setNewStudentName(e.target.value)} required />
+                    <label className="form-label">Username</label>
+                    <input className="form-input" type="text" placeholder="e.g. john_d" value={newStudentName} onChange={e => setNewStudentName(e.target.value)} required />
                   </div>
                   <div className="form-group" style={{ flex: 1, minWidth: '130px', marginBottom: 0 }}>
-                    <label className="form-label">Mật khẩu</label>
+                    <label className="form-label">Password</label>
                     <input className="form-input" type="text" placeholder="Password..." value={newStudentPass} onChange={e => setNewStudentPass(e.target.value)} required />
                   </div>
                   <div className="form-group" style={{ flex: 1, minWidth: '130px', marginBottom: 0 }}>
-                    <label className="form-label">Lớp</label>
+                    <label className="form-label">Class</label>
                     <select className="form-input" value={newStudentClass} onChange={e => setNewStudentClass(e.target.value)} required style={{ height: '2.7rem', padding: '0.5rem', background: 'hsla(var(--background-card-raw) / 0.6)', color: 'hsl(var(--text-primary))' }}>
-                      <option value="">-- Chọn lớp --</option>
+                      <option value="">-- Select Class --</option>
                       {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                     </select>
                   </div>
                   <button className="btn btn-primary" type="submit" style={{ height: '2.7rem' }}>
-                    <Plus size={16} /> Thêm Học Sinh
+                    <Plus size={16} /> Add Student
                   </button>
                 </form>
 
                 {/* Bulk CSV Import */}
-                <div style={{ marginBottom: '2rem' }}>
+                <div style={{ marginBottom: '1.5rem' }}>
                   <button className="btn btn-secondary btn-sm" onClick={() => { setShowBulkImport(!showBulkImport); setBulkResult(null); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Upload size={14} /> {showBulkImport ? 'Ẩn' : 'Nhập Danh Sách Hàng Loạt (CSV)'}
+                    <Upload size={14} /> {showBulkImport ? 'Hide' : 'Bulk Import Students (CSV)'}
                   </button>
                   {showBulkImport && (
                     <div style={{ marginTop: '1rem', padding: '1rem', background: 'hsla(var(--primary) / 0.05)', borderRadius: 'var(--radius-sm)', border: '1px solid hsla(var(--primary) / 0.15)' }}>
                       <p style={{ fontSize: '0.85rem', color: 'hsl(var(--text-secondary))', marginBottom: '0.5rem' }}>
-                        Mỗi học sinh 1 dòng: <code style={{ background: 'hsla(var(--border-color)/0.3)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>Họ và tên,Tên đăng nhập,Mật khẩu,Lớp</code>
+                        One student per line: <code style={{ background: 'hsla(var(--border-color)/0.3)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>Full Name, Username, Password, Class</code>
                       </p>
                       <textarea
-                        rows={6} placeholder={"Nguyễn Văn A,an_nv,pass123,12A1\nTrần Thị B,b_tt,pass456,12A2"}
+                        rows={6} placeholder={"John Doe,john_d,pass123,12A1\nJane Smith,jane_s,pass456,12A2"}
                         value={bulkCsvText} onChange={e => setBulkCsvText(e.target.value)}
                         style={{ width: '100%', fontFamily: 'monospace', fontSize: '0.85rem', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid hsl(var(--border-color))', background: 'hsl(var(--card-bg))', color: 'hsl(var(--text-primary))', resize: 'vertical', boxSizing: 'border-box' }}
                       />
                       <button className="btn btn-primary btn-sm" style={{ marginTop: '0.5rem' }} onClick={handleBulkImportSubmit}>
-                        <FileText size={14} /> Tiến Hành Nhập Danh Sách
+                        <FileText size={14} /> Process Bulk Import
                       </button>
                       {bulkResult && (
                         <div style={{ marginTop: '0.75rem', fontSize: '0.85rem' }}>
@@ -1684,26 +1756,66 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
                   )}
                 </div>
 
+                {/* Bulk Actions Bar */}
+                {selectedStudentIds.length > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'hsla(var(--danger) / 0.12)', padding: '0.65rem 1rem', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', border: '1px solid hsla(var(--danger) / 0.3)' }} className="animate-fade-in">
+                    <span style={{ fontSize: '0.9rem', color: 'hsl(var(--danger))', fontWeight: 'bold' }}>
+                      Selected {selectedStudentIds.length} student account(s)
+                    </span>
+                    <button className="btn btn-danger btn-sm" onClick={handleBulkDeleteSelectedStudents} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Trash2 size={14} /> Delete Selected ({selectedStudentIds.length})
+                    </button>
+                  </div>
+                )}
+
                 {errorMsg && <div style={{ color: 'hsl(var(--danger))', marginBottom: '1rem' }}>{errorMsg}</div>}
 
                 <div className="table-container">
                   <table className="data-table">
                     <thead><tr>
-                      <th>Họ và Tên</th><th>Tên đăng nhập (Username)</th><th>Mật khẩu</th><th>Lớp</th><th>Vai trò</th><th style={{ width: '100px' }}>Hành động</th>
+                      <th style={{ width: '40px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={students.length > 0 && selectedStudentIds.length === students.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedStudentIds(students.map(s => s.id));
+                            } else {
+                              setSelectedStudentIds([]);
+                            }
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </th>
+                      <th>Full Name</th><th>Username</th><th>Password</th><th>Class</th><th>Role</th><th style={{ width: '100px' }}>Actions</th>
                     </tr></thead>
                     <tbody>
                       {students.length === 0 ? (
-                        <tr><td colSpan="6" style={{ textAlign: 'center', color: 'hsl(var(--text-muted))' }}>Chưa có tài khoản học sinh nào.</td></tr>
+                        <tr><td colSpan="7" style={{ textAlign: 'center', color: 'hsl(var(--text-muted))' }}>No student accounts found.</td></tr>
                       ) : (
                         students.map(st => (
-                          <tr key={st.id}>
+                          <tr key={st.id} style={{ background: selectedStudentIds.includes(st.id) ? 'hsla(var(--primary) / 0.06)' : undefined }}>
+                            <td style={{ textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={selectedStudentIds.includes(st.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedStudentIds([...selectedStudentIds, st.id]);
+                                  } else {
+                                    setSelectedStudentIds(selectedStudentIds.filter(id => id !== st.id));
+                                  }
+                                }}
+                                style={{ cursor: 'pointer' }}
+                              />
+                            </td>
                             <td><strong>{st.fullName || st.username}</strong></td>
                             <td style={{ fontFamily: 'monospace', color: 'hsl(var(--primary))' }}>{st.username}</td>
                             <td style={{ fontFamily: 'monospace' }}>{st.password}</td>
-                            <td><span className="user-role-badge" style={{ background: 'hsla(var(--primary) / 0.08)', color: 'hsl(var(--primary))' }}>{st.className || 'Chưa xếp lớp'}</span></td>
-                            <td>Học sinh</td>
+                            <td><span className="user-role-badge" style={{ background: 'hsla(var(--primary) / 0.08)', color: 'hsl(var(--primary))' }}>{st.className || 'Unassigned'}</span></td>
+                            <td>Student</td>
                             <td style={{ display: 'flex', gap: '0.4rem' }}>
-                              <button className="btn btn-secondary btn-sm" title="Sửa thông tin" onClick={() => {
+                              <button className="btn btn-secondary btn-sm" title="Edit Student Information" onClick={() => {
                                 setEditingStudent(st);
                                 setEditStudentFullName(st.fullName || st.username);
                                 setEditStudentUsername(st.username);
@@ -1712,7 +1824,7 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
                               }}>
                                 <Edit size={14} />
                               </button>
-                              <button className="btn btn-danger btn-sm" title="Xóa" onClick={() => handleDeleteStudent(st.id)}>
+                              <button className="btn btn-danger btn-sm" title="Delete Student" onClick={() => handleDeleteStudent(st.id, st.fullName || st.username)}>
                                 <Trash2 size={14} />
                               </button>
                             </td>
@@ -1730,18 +1842,18 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                         <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'hsl(var(--text-primary))' }}>
                           <Edit size={20} style={{ color: 'hsl(var(--primary))' }} />
-                          Chỉnh sửa tài khoản Học sinh
+                          Edit Student Account
                         </h3>
                         <button className="btn btn-secondary btn-sm" onClick={() => setEditingStudent(null)}>✕</button>
                       </div>
 
                       <form onSubmit={handleSaveEditStudent}>
                         <div className="form-group" style={{ marginBottom: '1rem' }}>
-                          <label className="form-label">Họ và Tên</label>
+                          <label className="form-label">Full Name</label>
                           <input
                             className="form-input"
                             type="text"
-                            placeholder="Ví dụ: Nguyễn Văn An"
+                            placeholder="e.g. John Doe"
                             value={editStudentFullName}
                             onChange={e => setEditStudentFullName(e.target.value)}
                             required
@@ -1749,11 +1861,11 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
                         </div>
 
                         <div className="form-group" style={{ marginBottom: '1rem' }}>
-                          <label className="form-label">Tên đăng nhập (Username)</label>
+                          <label className="form-label">Username</label>
                           <input
                             className="form-input"
                             type="text"
-                            placeholder="Ví dụ: an_nv"
+                            placeholder="e.g. john_d"
                             value={editStudentUsername}
                             onChange={e => setEditStudentUsername(e.target.value)}
                             required
@@ -1761,11 +1873,11 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
                         </div>
 
                         <div className="form-group" style={{ marginBottom: '1rem' }}>
-                          <label className="form-label">Mật khẩu</label>
+                          <label className="form-label">Password</label>
                           <input
                             className="form-input"
                             type="text"
-                            placeholder="Mật khẩu..."
+                            placeholder="Password..."
                             value={editStudentPassword}
                             onChange={e => setEditStudentPassword(e.target.value)}
                             required
@@ -1773,21 +1885,21 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
                         </div>
 
                         <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                          <label className="form-label">Lớp</label>
+                          <label className="form-label">Class</label>
                           <select
                             className="form-input"
                             value={editStudentClassName}
                             onChange={e => setEditStudentClassName(e.target.value)}
                             style={{ height: '2.7rem', padding: '0.5rem', background: 'hsla(var(--background-card-raw) / 0.6)' }}
                           >
-                            <option value="">-- Chọn lớp --</option>
+                            <option value="">-- Select Class --</option>
                             {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                           </select>
                         </div>
 
                         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                          <button className="btn btn-secondary" type="button" onClick={() => setEditingStudent(null)}>Hủy</button>
-                          <button className="btn btn-primary" type="submit">Lưu Thay Đổi</button>
+                          <button className="btn btn-secondary" type="button" onClick={() => setEditingStudent(null)}>Cancel</button>
+                          <button className="btn btn-primary" type="submit">Save Changes</button>
                         </div>
                       </form>
                     </div>
@@ -2473,7 +2585,7 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
                 <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>Option 1: Upload CSV / TXT File</span>
                   <span style={{ fontSize: '0.8rem', color: 'hsl(var(--primary))', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => {
-                    const sample = "fullName,username,password,className\nNguyễn Văn An,an_nv,123456,B1.4F\nTrần Thị Bình,binh_tt,123456,B1.4F\nLê Văn Cường,cuong_lv,123456,B1.4F";
+                    const sample = "fullName,username,password,className\nJohn Doe,john_d,123456,B1.4F\nJane Smith,jane_s,123456,B1.4F\nAlex Johnson,alex_j,123456,B1.4F";
                     const blob = new Blob(['\uFEFF' + sample], { type: 'text/csv;charset=utf-8;' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -2488,11 +2600,11 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
               </div>
 
               <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label">Option 2: Paste List (Định dạng: Họ và tên, Username, Password, Class)</label>
+                <label className="form-label">Option 2: Paste List (Format: Full Name, Username, Password, Class)</label>
                 <textarea
                   className="form-input"
                   rows="6"
-                  placeholder={"Ví dụ:\nNguyễn Văn An, an_nv, 123456, B1.4F\nTrần Thị Bình, binh_tt, 123456, B1.4F"}
+                  placeholder={"Example:\nJohn Doe, john_d, 123456, B1.4F\nJane Smith, jane_s, 123456, B1.4F"}
                   value={bulkCsvText}
                   onChange={e => setBulkCsvText(e.target.value)}
                   style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
@@ -2595,11 +2707,61 @@ const getPathForView = (view) => VIEW_PATHS[view] || '/';
         );
       })()}
 
+      {/* GLOBAL CONFIRMATION MODAL */}
+      {confirmModal && (
+        <div className="modal-overlay">
+          <div className="glass-card modal-content animate-fade-in" style={{ maxWidth: '440px', width: '92%' }}>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.75rem', color: confirmModal.confirmVariant === 'danger' ? 'hsl(var(--danger))' : 'hsl(var(--text-primary))', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {confirmModal.confirmVariant === 'danger' && <AlertTriangle size={20} />}
+              {confirmModal.title}
+            </h3>
+            <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.95rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+              {confirmModal.message}
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setConfirmModal(null)}>Cancel</button>
+              <button
+                className={`btn ${confirmModal.confirmVariant === 'danger' ? 'btn-danger' : 'btn-primary'}`}
+                onClick={() => {
+                  const fn = confirmModal.onConfirm;
+                  setConfirmModal(null);
+                  if (fn) fn();
+                }}
+              >
+                {confirmModal.confirmText || 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GLOBAL TOAST NOTIFICATION */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '2rem',
+          right: '2rem',
+          zIndex: 9999,
+          padding: '0.85rem 1.4rem',
+          borderRadius: 'var(--radius-md)',
+          background: toast.type === 'error' ? 'hsl(var(--danger))' : 'hsl(var(--success))',
+          color: '#fff',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+          fontWeight: '600',
+          fontSize: '0.9rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }} className="animate-fade-in">
+          {toast.type === 'error' ? '⚠️' : '✅'} {toast.message}
+        </div>
+      )}
+
       {showScrollTop && (
         <button
           className="scroll-to-top-btn"
           onClick={scrollToTop}
-          aria-label="Cuộn lên đầu trang"
+          aria-label="Scroll to top"
         >
           <ArrowUp size={20} />
         </button>
